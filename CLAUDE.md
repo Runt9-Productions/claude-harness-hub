@@ -2,8 +2,9 @@
 
 A local web app on `127.0.0.1` that shows every running Claude Code session on this machine (its status, its board
 and its away mode) and lets the owner answer a session's pending decisions from the browser. Answers reach a session
-through a file inbox that the `board` and `away` plugins read. Public and MIT: nothing from an employer, a private
-project or a specific machine goes in, in code, comments, docs, tests, commit messages or pull request text.
+through a file inbox that the `board` and `away` plugins read. Flags from the `watcher` plugin, also in
+runt9-claude-harness, arrive as ordinary board decisions. Public and MIT: nothing from an employer, a private project
+or a specific machine goes in, in code, comments, docs, tests, commit messages or pull request text.
 
 ## Layout
 

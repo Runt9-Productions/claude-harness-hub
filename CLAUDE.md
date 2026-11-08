@@ -11,7 +11,7 @@ project or a specific machine goes in, in code, comments, docs, tests, commit me
   slice; this section names them once they exist.
 - `.github/workflows/ci.yml`: CI, ending in `gate`, the one required check. The guard scripts, the leak scan and the
   knowledge base validator run from runt9-claude-harness at the commit `HARNESS_SHA` pins there.
-- `package.json`, `package-lock.json`, `.npmrc`: the pinned toolchain. `tsconfig.json`, `.oxlintrc.json`,
+- `.nvmrc`, `package.json`, `package-lock.json`, `.npmrc`: the pinned runtime and toolchain. `tsconfig.json`, `.oxlintrc.json`,
   `.prettierrc.json`, `.prettierignore`: its configuration.
 - `.claude/`: the profiles, review lenses and agents the `develop`, `lens-review` and `test-review` plugins read.
 - `.claude/reference/`: this repo's knowledge base, in the reference-kb plugin's format. Read the note covering an
@@ -19,7 +19,7 @@ project or a specific machine goes in, in code, comments, docs, tests, commit me
 
 ## Checks
 
-Run `npm ci` once, then from the root:
+Run `nvm use` and `npm ci` once, then from the root:
 
 ```
 npx tsc -p tsconfig.json
@@ -51,7 +51,7 @@ These come from the threat model and hold for every change.
 
 ## Owner's review
 
-Changes to `.github/`, this file, `.claude/` profiles, lenses and agents, `.npmrc`, `package.json`,
+Changes to `.github/`, this file, `.claude/` profiles, lenses and agents, `.npmrc`, `.nvmrc`, `package.json`,
 `package-lock.json` and the tool configs need the owner's review; say so in the pull request. Nothing in CI blocks
 them. The bot cannot push a change under `.github/workflows/`.
 

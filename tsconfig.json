@@ -2,8 +2,8 @@
   // Node 24 runs the server's TypeScript directly by stripping types, so nothing is emitted, imports name the .ts
   // file, and only syntax that erases to JavaScript is allowed.
   "compilerOptions": {
-    "target": "es2024",
-    "lib": ["es2024"],
+    "target": "es2025",
+    "lib": ["es2025"],
     "module": "nodenext",
     "types": ["node"],
     "noEmit": true,

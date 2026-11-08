@@ -129,7 +129,7 @@ jobs:
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 24.19.0
+          node-version-file: .nvmrc
           package-manager-cache: false
 
       - name: Install the locked packages
@@ -183,7 +183,7 @@ jobs:
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 24.19.0
+          node-version-file: .nvmrc
           package-manager-cache: false
 
       - name: Install the locked packages
@@ -210,7 +210,7 @@ jobs:
             | /usr/bin/grep -vE '\.(test|d)\.ts$')
           missing=0
           for file in "${sources[@]}"; do
-            if ! /usr/bin/grep -qxF "SF:$PWD/$file" "$RUNNER_TEMP/lcov.info"; then
+            if ! /usr/bin/grep -qxF "SF:$file" "$RUNNER_TEMP/lcov.info"; then
               echo "::error file=$file::No test loads this file, so coverage does not count it."
               missing=1
             fi

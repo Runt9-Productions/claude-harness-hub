@@ -42,7 +42,7 @@ Routing, binding under `auto` when the diff matches:
 |---|---|
 | `public-leak` | any change |
 | `test-quality` | any test file added or changed |
-| `guardrails` | anything under `.github/`; `.npmrc`; `package.json`; `package-lock.json`; `tsconfig.json`; `.oxlintrc.json`; `.prettierrc.json`; `.prettierignore`; `.claude/`; `CLAUDE.md`; a release or update path |
+| `guardrails` | anything under `.github/`; `.npmrc`; `.nvmrc`; `package.json`; `package-lock.json`; `tsconfig.json`; `.oxlintrc.json`; `.prettierrc.json`; `.prettierignore`; `.claude/`; `CLAUDE.md`; a release or update path |
 | `browser-surface` | code that serves HTTP, sets a response header, checks a request, handles the launch token or cookie, or renders board text in the browser |
 | `server-input` | code that reads `claude agents --json`, the board store, presence files or inbox results; builds a path; starts a process; or writes the inbox |
 
@@ -95,7 +95,7 @@ lenses, where hostile input is the case. A finding that removes code is worth as
 |---|---|---|
 | the check commands in `CLAUDE.md` | the `checks` and `tests` jobs in `.github/workflows/ci.yml` | hand |
 | a `# vX` comment beside a pinned action | the SHA it annotates | Dependabot |
-| `node-version` in `ci.yml` | `engines.node` in `package.json` | hand |
+| `.nvmrc`, which CI reads | `engines.node` in `package.json` | hand |
 
 ## Companions
 

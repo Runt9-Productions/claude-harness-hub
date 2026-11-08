@@ -3,11 +3,11 @@ title: CI Checks
 type: note
 permalink: ci/overview
 tags: ["ci", "node-test", "coverage", "oxlint", "typescript"]
-verified: 2026-11-07
+verified: 2026-11-08
 coverage: partial
 sources:
   - ".github/workflows/ci.yml"
-measured_on: "Node 24.19.0, npm 11.17.0, TypeScript 7.0.2, oxlint 1.90.0, oxlint-tsgolint 7.0.2005"
+measured_on: "Node 26.13.0, npm 11.20.0, TypeScript 7.0.2, oxlint 1.90.0, oxlint-tsgolint 7.0.2005"
 ---
 
 # CI Checks
@@ -28,6 +28,7 @@ Read this before changing a step in the `checks` or `tests` job, or a config one
   #silent-failure #measured
 - [fact] Once a test loads a file, the threshold applies to it: a file at 75% line coverage failed
   `--test-coverage-lines=95` with exit 1 #measured
+- [trap] The lcov report's `SF:` lines hold paths relative to the working directory, not absolute ones #measured
 - [invariant] The `tests` job's lcov check fails any non-test `.ts` file under `src/server/` or `src/shared/` that is
   missing from the report; source outside those globs is not checked and needs the step changed
 - [fact] `tsc -p` on a project whose `include` matches no file exits 2 with TS18003 #measured

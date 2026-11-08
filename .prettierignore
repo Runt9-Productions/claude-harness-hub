@@ -1,0 +1,5 @@
+# Prose and generated files are not formatted: Prettier realigns Markdown tables and rewraps lists.
+*.md
+package-lock.json
+.claude/
+.github/

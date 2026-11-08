@@ -1,0 +1,15 @@
+# This repository's allowlist for the leak scan's shape rules. The scan reads it from the base branch, never from
+# the change being checked, so an entry takes effect only after review. Only a top-level `filter` belongs here:
+# true skips a finding.
+#
+# The pinned harness commit in the CI workflow is a full hash on purpose, allowed only on its line; finding["line"]
+# keeps its newline, hence `\s*$`.
+
+filter = '''
+filter.matchesAny(finding["match"], [`^(?:ABC|PROJ)-123$`]) ||
+(
+    finding["rule_id"] == "hex-identifier" &&
+    attributes["path"] == ".github/workflows/ci.yml" &&
+    filter.matchesAny(finding["line"], [`^\s*HARNESS_SHA: [0-9a-f]{40}\s*$`])
+)
+'''

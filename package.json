@@ -1,0 +1,16 @@
+{
+  "name": "claude-harness-hub",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=24.19.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "oxlint": "1.90.0",
+    "oxlint-tsgolint": "7.0.2005",
+    "prettier": "3.9.10",
+    "typescript": "7.0.2"
+  }
+}

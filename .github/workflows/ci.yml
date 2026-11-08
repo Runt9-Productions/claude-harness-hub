@@ -1,0 +1,236 @@
+name: CI
+
+# `gate` is the check branch rules require. Never filter this workflow with paths or paths-ignore: a PR the filter
+# excludes never starts it, so `gate` never reports and the PR waits forever. `edited` is listed because changing a
+# PR's base branch raises only that event, and the new base needs its own run.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+
+# The guard scripts and the leak scan run from runt9-claude-harness at this commit. It is pinned here, where the bot
+# cannot write, so a PR cannot change which copy checks it. Dependabot does not track it; raise it by hand.
+env:
+  HARNESS_REPO: https://github.com/Runt9-Productions/runt9-claude-harness.git
+  HARNESS_SHA: 283ad994011ee0517354986c1285fde98bc92d2a
+
+jobs:
+  # zizmor audits this workflow, so every other job waits for it: a flaw it would flag must not run first.
+  zizmor:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # zizmor reads a config file it finds in the repo, and outside .github/workflows the bot can write one, so a
+      # config could switch audits off without an owner commit.
+      - name: No zizmor config file
+        shell: bash
+        run: |
+          configs="$(find . -path ./.git -prune -o -iname '*zizmor*.y*ml' -print)"
+          if [[ -n $configs ]]; then
+            echo "::error::zizmor would read a config from the repo: $configs"
+            exit 1
+          fi
+
+      # Online audits are off because they spend API rate limit.
+      - uses: zizmorcore/zizmor-action@53290badfa369cb0bf7ad16342cb62c2fa47ac7b # v0.8.0
+        with:
+          online-audits: false
+          advanced-security: false
+          annotations: true
+
+  # The checkout is GitHub's merge of the PR into its base, so HEAD^1 is the base as it will be merged into,
+  # `git diff HEAD^1 HEAD` is exactly what the merge changes, and HEAD^1..HEAD^2 is exactly the PR's commits.
+  guard:
+    needs: zizmor
+    runs-on: ubuntu-24.04
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Fetch the harness at the pinned commit
+        run: |
+          git init -q "$RUNNER_TEMP/harness"
+          git -C "$RUNNER_TEMP/harness" fetch -q --depth 1 "$HARNESS_REPO" "$HARNESS_SHA"
+          git -C "$RUNNER_TEMP/harness" checkout -q FETCH_HEAD
+
+      - name: No invisible characters
+        run: bash "$RUNNER_TEMP/harness/.github/scripts/guard-invisible-characters.sh"
+
+      - name: Install betterleaks
+        if: ${{ !cancelled() }}
+        run: |
+          bash "$RUNNER_TEMP/harness/.github/scripts/install-betterleaks.sh" "$RUNNER_TEMP/bin"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      # The allowlist is .leak-scan.toml as the base branch has it, so a PR cannot allowlist its own findings.
+      # Dependabot's messages name commits by full hash. PR_AUTHOR comes from the event: a commit's author fields are
+      # whatever the PR's author set them to.
+      - name: Leak scan over the PR's commits
+        if: ${{ !cancelled() }}
+        env:
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          options=()
+          if [[ $PR_AUTHOR == 'dependabot[bot]' ]]; then
+            options+=(--allow-message-hex)
+          fi
+          bash "$RUNNER_TEMP/harness/harness/leak-scan/scan.sh" "${options[@]}" . HEAD^1 HEAD^1..HEAD^2
+
+      # A wheel only, so installing runs no package's build code.
+      - name: Install PyYAML for the knowledge base validator
+        if: ${{ !cancelled() }}
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install --disable-pip-version-check --no-deps --only-binary :all: pyyaml==6.0.3
+
+      # The validator exits 2 when it finds no notes, so a root that moved or emptied fails.
+      - name: Knowledge base validates
+        if: ${{ !cancelled() }}
+        run: |
+          "$RUNNER_TEMP/venv/bin/python" "$RUNNER_TEMP/harness/plugins/reference-kb/skills/reference-kb/scripts/validate.py" \
+            --root .claude/reference
+
+      # A note fails when the PR changes its sources without re-verifying it. Skipped for Dependabot, whose pin bumps
+      # change sources without touching what a note says, and which cannot edit the notes.
+      - name: Knowledge base notes are re-verified when their sources change
+        if: ${{ !cancelled() && github.event.pull_request.user.login != 'dependabot[bot]' }}
+        run: |
+          "$RUNNER_TEMP/venv/bin/python" "$RUNNER_TEMP/harness/plugins/reference-kb/skills/reference-kb/scripts/validate.py" \
+            --root .claude/reference --stale-in HEAD^1..HEAD^2
+
+  # Tools run from the lockfile with their config named in the command. Every step after the install runs even when
+  # an earlier one fails, so one run reports every problem.
+  checks:
+    needs: zizmor
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.19.0
+          package-manager-cache: false
+
+      - name: Install the locked packages
+        id: install
+        run: npm ci
+
+      # Fails on a registry signature or attestation that does not verify. A run that checks no package has checked
+      # nothing, so the count is required.
+      - name: Package signatures verify
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: |
+          status=0
+          out=$(npm audit signatures 2>&1) || status=$?
+          echo "$out"
+          (( status == 0 )) || exit "$status"
+          if ! grep -qE '^[1-9][0-9]* packages? ha(s|ve) verified registry signatures' <<< "$out"; then
+            echo "::error::npm audit signatures verified no package."
+            exit 1
+          fi
+
+      - name: Prettier
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npx --no-install prettier --check --config .prettierrc.json --ignore-path .prettierignore --no-editorconfig .
+
+      # tsc exits non-zero when the project includes no files, so an emptied or moved source tree fails.
+      - name: tsc
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npx --no-install tsc -p tsconfig.json
+
+      # Type-aware and the unused-directive report are set here as well as in the config, so the config cannot turn
+      # them off. oxlint exits non-zero when it finds no files to lint.
+      - name: oxlint
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: |
+          npx --no-install oxlint -c .oxlintrc.json --type-aware --deny-warnings \
+            --report-unused-disable-directives-severity=error src
+
+  tests:
+    needs: zizmor
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.19.0
+          package-manager-cache: false
+
+      - name: Install the locked packages
+        run: npm ci
+
+      # node --test passes when it finds no tests, so the files are listed and counted. Coverage reports only the
+      # files some test loads, so every server and shared source file must appear in it: a module whose tests were
+      # deleted would otherwise drop out of the report and leave the threshold green. The threshold itself is a
+      # tripwire for tests removed from a file that is still loaded, not a measure of quality.
+      - name: node:test with coverage
+        run: |
+          mapfile -d '' tests < <(git ls-files -z -- ':(glob)src/**/*.test.ts')
+          if (( ${#tests[@]} == 0 )); then
+            echo "::error::No src/**/*.test.ts files found."
+            exit 1
+          fi
+          node --test --experimental-test-coverage \
+            --test-coverage-include='src/server/**/*.ts' --test-coverage-include='src/shared/**/*.ts' \
+            --test-coverage-exclude='**/*.test.ts' --test-coverage-lines=80 \
+            --test-reporter=spec --test-reporter-destination=stdout \
+            --test-reporter=lcov --test-reporter-destination="$RUNNER_TEMP/lcov.info" \
+            "${tests[@]}"
+          mapfile -t sources < <(git ls-files -- ':(glob)src/server/**/*.ts' ':(glob)src/shared/**/*.ts' \
+            | /usr/bin/grep -vE '\.(test|d)\.ts$')
+          missing=0
+          for file in "${sources[@]}"; do
+            if ! /usr/bin/grep -qxF "SF:$PWD/$file" "$RUNNER_TEMP/lcov.info"; then
+              echo "::error file=$file::No test loads this file, so coverage does not count it."
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+  # Runs even when a job it needs failed: with a plain `needs` this job would be skipped, and GitHub passes a
+  # skipped required check.
+  gate:
+    needs: [zizmor, guard, checks, tests]
+    if: always()
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Fail if any needed job failed or was cancelled
+        shell: bash
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Job results: $RESULTS"
+          if [[ " $RESULTS " == *" failure "* || " $RESULTS " == *" cancelled "* ]]; then
+            exit 1
+          fi

@@ -60,8 +60,9 @@ a knowledge base note already answers a question, this file points there.
 
 ## 6. Build, test and pre-push
 
-- There is no build step for the server, which Node runs from its TypeScript. The checks are the four commands in
-  `CLAUDE.md`, "Checks".
+- There is no build step for the server, which Node runs from its TypeScript. The browser code is built with
+  `tsc -p src/web/tsconfig.json` into `dist/browser/`, which `npm start` runs first; the browser tests and
+  verification need that build, and `node --test` does not. The checks are the commands in `CLAUDE.md`, "Checks".
 - Never run locally: none is barred. The coverage step is CI's; run `node --test` with `--experimental-test-coverage`
   to see it.
 - Pre-push: the installed `pre-push` hook checks authorship and the branch prefix, then runs the leak scan and a
@@ -86,18 +87,21 @@ a knowledge base note already answers a question, this file points there.
 
 - Method: the `verifier` agent starts the hub only through `scripts/start-fixture-hub.sh`, then drives headless Chrome
   through the chrome-devtools tools to the end state the brief names. The script arrives with the first slice, and
-  no verification runs before it does. It copies the checked-in fixtures to a new temporary directory, sets `HOME` to
-  it and puts a stub `claude` first on `PATH`, so every run starts from the same state and the hub cannot reach the
-  real `~/.claude` or live sessions, with no test-only path in the hub's code.
+  no verification runs before it does. It copies the checked-in fixtures to a new temporary directory, sets `HOME` and
+  `CLAUDE_CONFIG_DIR` to the copy, puts a stub `claude` first on `PATH` and runs `src/e2e/fixture-main.ts`, which
+  calls `start(config)` on a free port and prints the link. Every run starts from the same state and the hub cannot
+  reach the real `~/.claude` or live sessions, with no test-only path in the hub's code.
 - Evidence: the steps, what each showed, and screenshots attached with
   `gh pr comment <n> --body-file <file> --attach '<image>#<alt text>'` (gh 2.99 or newer). No scan reads an image, so
   every image is looked at before it is posted.
-- What it cannot show: behaviour with real sessions and the real `board` and `away` plugins, which the owner tries
-  before merging.
+- What it cannot show: behaviour with real sessions and the real `hub`, `board` and `away` plugins, which the owner
+  tries before merging.
 
 ## 8. Shared machine resources
 
-- The hub's port. Two hubs on one port collide, so a verification run picks a free port and says which.
+- The hub's port, 47821 by default, and its socket under the config dir. Two hubs on either collide, and a hub on the
+  real config dir is the one live sessions connect to. The fixture script's free port and temporary config dir avoid
+  both; a verification run says which port it used.
 - The real `~/.claude` is the owner's, shared by every session: no test or verification reads or writes it.
 
 ## 9. Review

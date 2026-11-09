@@ -44,3 +44,5 @@ Read this before changing a step in the `checks` or `tests` job, or a config one
   (owner, 2026-11-07)
 
 ## Relations
+
+- see_also [[Hub Tests]]

@@ -1,6 +1,6 @@
 # Lens: browser-surface
 
-Tries to make the hub act for someone other than the person at its own tab: another origin's page, a rebound DNS name, or board text a model wrote; covers request checks, the launch token and cookie, response headers, and how board text reaches the page.
+Tries to make the hub act for someone other than the person at its own tab: another origin's page, a rebound DNS name, or board text a model wrote; covers request checks, the launch token, response headers, and how board text reaches the page.
 
 ## The question
 
@@ -21,20 +21,21 @@ Build the request or the text that gets through. Try:
   `Origin`, a `GET` that changes state, a preflight the server answers.
 - **DNS rebinding and host checks.** A `Host` header with another name, a different port, a trailing dot, upper case,
   or an IPv6 form of the loopback address; a bind to anything but `127.0.0.1`.
-- **The launch token and cookie.** The token logged after its one print, kept in the URL, accepted twice, or
-  compared in a way that leaks its length or timing; a cookie without `HttpOnly` or `SameSite=Strict`, or one that
-  outlives a restart.
-- **Response headers.** A response, error pages and static files included, without the full CSP, `nosniff` or
-  `Referrer-Policy`; any CORS header.
+- **The launch token.** The token logged or put in an error after its one print, left in the URL after load, saved
+  before the server accepted it, sent anywhere but the `Authorization` header of a request to the hub, accepted after
+  a restart, or compared in a way that leaks its length or timing; an `/api/*` route that answers without it.
+- **Response headers.** A response, error pages and static files included, without the full CSP, `nosniff`,
+  `Referrer-Policy` or `Cache-Control: no-store`; any CORS header.
 - **Board text in the page.** Text reaching `innerHTML`, `insertAdjacentHTML`, `document.write`, the framework's raw
   HTML escape hatch, an `href` or `src` (a `javascript:` URL), a style, or an attribute name; markdown rendered as
   markup.
-- **The live stream.** An event stream that sends to an unauthenticated client, or carries more than the snapshot
-  needs.
+- **The snapshot.** A field in it that the hub did not copy by name, such as a tool use id or an unanswered
+  decision's note.
 
 ## Out of scope
 
-Readers of files and processes belong to `server-input`; CI and dependencies to `guardrails`.
+Readers of files and processes, and the plugin socket, which no browser can reach, belong to `server-input`; CI and
+dependencies to `guardrails`.
 
 ## How far to read
 

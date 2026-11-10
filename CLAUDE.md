@@ -2,14 +2,18 @@
 
 A local web app on `127.0.0.1` that shows every running Claude Code session on this machine (its status, its board
 and its away mode) and lets the owner answer a session's pending decisions from the browser. Answers reach a session
-through a file inbox that the `board` and `away` plugins read. Flags from the `watcher` plugin, also in
+through a local Unix socket that the optional `hub` plugin holds a request open on, and the plugin passes them on to
+the `board` and `away` plugins. Flags from the `watcher` plugin, also in
 runt9-claude-harness, arrive as ordinary board decisions. Public and MIT: nothing from an employer, a private project
 or a specific machine goes in, in code, comments, docs, tests, commit messages or pull request text.
 
 ## Layout
 
-- `src/`: the hub. Its modules and the rules between them are set by the architecture, agreed before the first
-  slice; this section names them once they exist.
+- `src/`: the hub. `shared` holds the snapshot and command types; `server/hub` builds the snapshot, checks commands
+  and runs the command queue as pure functions; `server/sources` reads and validates outside state; `server/http`
+  serves the browser and socket routes; `server/main.ts` wires them together behind `start(config)`; `web/logic` is
+  the browser's pure logic; `web/ui` holds the Preact views and the client; `e2e` holds the browser tests. What each
+  may import is in the architecture note, listed in `.claude/reference/README.md`.
 - `.github/workflows/ci.yml`: CI, ending in `gate`, the one required check. The guard scripts, the leak scan and the
   knowledge base validator run from runt9-claude-harness at the commit `HARNESS_SHA` pins there.
 - `.nvmrc`, `package.json`, `package-lock.json`, `.npmrc`: the pinned runtime and toolchain. `tsconfig.json`, `.oxlintrc.json`,
@@ -39,16 +43,16 @@ These come from the threat model and hold for every change.
 - **Dependencies.** The server has no runtime dependency beyond the one validator the owner approved. Adding,
   removing or upgrading a package is the owner's install, after an evidence packet for it and every package it pulls
   in, gathered with `npm view`, which runs nothing. Never run `npm install`; `npm ci` is allowed.
-- **Browser surface.** Bind `127.0.0.1` only. Every request checks `Host` exactly and the launch cookie; every change
-  is a `POST` with the hub's own `Origin` and a JSON body. No CORS headers. Every response carries the strict CSP
-  with Trusted Types. Board text is always rendered as text, never as markup.
-- **Input.** Everything from outside the process (HTTP bodies, `claude agents --json`, the board store, presence
-  files, inbox results) is validated where it enters, and an unknown shape is a visible error, never a default.
+- **Browser surface.** Bind `127.0.0.1` only. Every request checks `Host` exactly, and every `/api/*` request also
+  checks the launch token; every change is a `POST` with the hub's own `Origin` and a JSON body. No CORS headers.
+  Every response carries the strict CSP with Trusted Types. Board text is always rendered as text, never as markup.
+- **Input.** Everything from outside the process (HTTP bodies, socket requests, `claude agents --json`, the board and
+  away stores) is validated where it enters, and an unknown shape is a visible error, never a default.
 - **Paths and processes.** Paths come only from fixed roots plus validated segments, checked again to sit under the
   root. Child processes run through `execFile` with fixed arguments, never a shell. The hub never opens
   `~/.claude/sessions/`.
-- **Inbox writes** go to a temporary name created exclusively, then are renamed into place, in directories with mode
-  `0700`.
+- **Plugin socket.** It sits in a directory checked with `lstat`, owned by this user with mode `0700`. A command
+  enters only through the browser API: the socket routes only hand out pending commands and take reports and results.
 
 ## Owner's review
 

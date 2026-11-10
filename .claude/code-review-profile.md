@@ -6,10 +6,11 @@ it judges against.
 ## What ships, and why a defect is expensive
 
 A public, MIT-licensed local web app that runs as its user, reads `~/.claude`, and can make Claude Code sessions act
-by answering their decisions through a file inbox. A page in the user's browser that gets the hub's authority can
-answer every decision in every session, so the browser surface and every reader of outside state are security
-boundaries. The hub is released to npm and runs on other people's machines, so a malicious dependency or release
-runs as each of them. Everything merged is public, and git history keeps whatever was pushed.
+by answering their decisions through a local socket that the optional `hub` plugin holds a request open on. A page
+in the user's browser that gets the hub's authority can answer every decision in every session, switch their away
+mode and start their turns, so the browser surface and every reader of outside state are security boundaries. The
+hub is released to npm and runs on other people's machines, so a malicious dependency or release runs as each of
+them. Everything merged is public, and git history keeps whatever was pushed.
 
 ## Fetching the diff
 
@@ -43,8 +44,8 @@ Routing, binding under `auto` when the diff matches:
 | `public-leak` | any change |
 | `test-quality` | any test file added or changed |
 | `guardrails` | anything under `.github/`; `.npmrc`; `.nvmrc`; `package.json`; `package-lock.json`; `tsconfig.json`; `.oxlintrc.json`; `.prettierrc.json`; `.prettierignore`; `.claude/`; `CLAUDE.md`; a release or update path |
-| `browser-surface` | code that serves HTTP, sets a response header, checks a request, handles the launch token or cookie, or renders board text in the browser |
-| `server-input` | code that reads `claude agents --json`, the board store, presence files or inbox results; builds a path; starts a process; or writes the inbox |
+| `browser-surface` | code that serves HTTP, sets a response header, checks a request, handles the launch token, or renders board text in the browser |
+| `server-input` | code that reads `claude agents --json` or the board and away stores; serves the socket routes or takes their reports and results; builds a path; starts a process; or creates the socket or its directory |
 
 ## Severity calibration
 
@@ -127,8 +128,11 @@ Each was decided by the owner. Report one only when the diff brings something th
 - Runners pinned to `ubuntu-24.04`.
 - The required `gate` check not being pinned to a source app: the bot has no permission to write statuses or checks.
 - The full harness commit hash in `HARNESS_SHA`.
-- Other processes running as the same OS user, which can already write the board store and the inbox. The plugins
-  validate every command.
+- A process running as the owner outside the sandbox standing up its own hub, by starting the real one under a fake
+  terminal, writing a small server or replacing the socket, which every session with the `hub` plugin then connects
+  to; and the same process reading, taking or misreporting a session's commands, results and reports. It can already
+  add a hook to `~/.claude/settings.json`, so this gives it no reach it lacked. Sandboxed Bash cannot write under
+  `~/.claude`, and not installing the plugin is the off switch. (2026-11-09)
 - Guardrail config changes reported in review rather than failed by CI.
 
 ## Other callers

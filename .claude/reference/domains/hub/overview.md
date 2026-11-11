@@ -3,7 +3,7 @@ title: Hub Architecture
 type: note
 permalink: hub/overview
 tags: ["architecture", "modules", "imports", "typescript", "zod", "hub-plugin"]
-verified: 2026-11-09
+verified: 2026-11-11
 coverage: partial
 sources:
   - "tsconfig.json"
@@ -15,7 +15,8 @@ measured_on: "Node 26.13.0 (TypeScript and oxlint versions not recorded)"
 
 > **Scope.** The hub's shape, its modules and the rules between them, as agreed with the owner on 2026-11-08 and
 > 2026-11-09, before any hub code existed; `tsconfig.json` and the `tests` job of `.github/workflows/ci.yml` were read
-> for the lines that cite them. The two measured lines were taken on 2026-11-08 while designing and were not re-run
+> for the lines that cite them, and `tsconfig.json` again on 2026-11-11 once the server shell changed it, with the
+> other lines carried forward unchecked. The two measured lines were taken on 2026-11-08 while designing and were not re-run
 > for this note. Not covered: the other areas, which have their own notes linked below, and the `hub` plugin's own
 > code, which lives in runt9-claude-harness.
 
@@ -70,8 +71,8 @@ simplification can go back to the owner.
   `src/web/tsconfig.json` for `ui`, with DOM types and no Node types; `src/e2e/tsconfig.json` with both, emitting
   nothing. A `/// <reference lib="dom" />` in one e2e test would make DOM types global across the root project
 - [fact] A nested `src/web/tsconfig.json` worked with `tsc` and with oxlint's type-aware rules #measured (2026-11-08)
-- [trap] The root `tsconfig.json` still includes all of `src` and its comment says Node 24; both change when the
-  first browser code lands (comment at `tsconfig.json:2`, `"include": ["src"]` at `tsconfig.json:23`)
+- [invariant] The root `tsconfig.json` leaves the other two projects' directories to them (`"exclude"` at
+  `tsconfig.json:24`)
 
 ### Schemas
 

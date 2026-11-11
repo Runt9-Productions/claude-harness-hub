@@ -32,4 +32,5 @@ Rulings for the first slice. The design itself is in the hub notes under `domain
 
 ## Open Questions
 
-None.
+- [question] Whether the bot stages and commits the owner's Preact install in `package.json` and `package-lock.json`,
+  together with the `start` script, since the pre-push hook takes only the bot's commits

@@ -17,8 +17,9 @@ this slice builds of them.
 - [invariant] `src/shared/api.ts`: the snapshot type with the fields this slice serves (`runId`, `now`, `sessions`
   empty, `errors`), and the API paths as constants, which the server routes and the client both import
 - [invariant] `src/server/http/browser.ts`: the request handler. Exact `Host` of `127.0.0.1:<port>`, then the route,
-  then for `/api/*` the bearer token, hashed on both sides and compared in constant time. Every response, 404, 401 and
-  500 included, carries the CSP with the import map's hash, `nosniff`, `Referrer-Policy: no-referrer` and
+  then for `/api/*` the bearer token, hashed on both sides and compared in constant time. A wrong `Host` answers 421,
+  another method 405 with `Allow: GET`, and a missing token 401 with `WWW-Authenticate: Bearer`. Every response, 404,
+  401 and 500 included, carries the CSP with the import map's hash, `nosniff`, `Referrer-Policy: no-referrer` and
   `Cache-Control: no-store`, and no CORS header. No route accepts a `POST` yet
 - [invariant] `src/server/http/assets.ts`: the asset table, built once from the asset root: everything under
   `dist/browser/`, `src/web/styles.css`, Preact's three files under `/vendor/`, and the icon. Exact URL to file and
@@ -28,12 +29,13 @@ this slice builds of them.
   serves `GET /api/snapshot` from the shared type. The command-line part, under `import.meta.main`, takes
   `--port <n>` (default 47821), refuses to start when stdout is not a terminal or the port is busy, and prints the
   link once
-- [invariant] Tests drive the server over HTTP on a free port: a wrong `Host` (another name, port, case, trailing dot,
+- [invariant] Tests drive the server over HTTP on a free port: a wrong `Host` (another name, port, no port, trailing dot,
   IPv6 loopback) refused, `/api/snapshot` without or with a wrong token 401 and with the right one 200, the headers on
   every kind of response, the CSP hash matching the page's import map, an unknown path 404 with no file read, and the
   command line refusing a piped stdout
 - [invariant] Config: the root `tsconfig.json` excludes `src/web/ui` and `src/e2e` and its comment names Node 26;
-  `package.json` gains `start`; `.gitignore` and `.prettierignore` gain `dist/`
+  `package.json` gains `start`, which works from task 02 on, once the browser build, styles and icon exist;
+  `.gitignore` and `.prettierignore` gain `dist/`
 
 ### 02 Browser page
 

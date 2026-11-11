@@ -82,6 +82,18 @@ export function waitingList(sessions: readonly SessionView[]): WaitingList {
   };
 }
 
+/** The switcher's count: every session's `waitingCount`, so the held sessions add nothing. */
+export function waitingTotal(sessions: readonly SessionView[]): number {
+  return sessions.reduce((total, session) => total + session.waitingCount, 0);
+}
+
+/** Such as "Add the export button is waiting: permission prompt. Answer it in its terminal." */
+export function heldLine(held: HeldSession): string {
+  const waitingFor = held.session.waitingFor;
+  const waiting = waitingFor === undefined ? "is waiting" : `is waiting: ${waitingFor}`;
+  return `${held.sessionName} ${waiting}. Answer it in its terminal.`;
+}
+
 const minuteMs = 60_000;
 const hourMs = 60 * minuteMs;
 const dayMs = 24 * hourMs;

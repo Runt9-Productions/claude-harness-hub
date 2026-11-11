@@ -54,6 +54,21 @@ function StateLine({ session }: { session: SessionView }) {
   );
 }
 
+/** "process stopped: `claude attach <id>` wakes it", drawn only when the session has no process. */
+export function StoppedLine({ session }: { session: SessionView }) {
+  if (session.isProcessAlive) return null;
+  return (
+    <p class="stopped">
+      process stopped
+      {session.shortId !== undefined && (
+        <>
+          : <code>claude attach {session.shortId}</code> wakes it
+        </>
+      )}
+    </p>
+  );
+}
+
 function TaskLine({ task }: { task: TaskView }) {
   const ticked = task.items.filter((item) => item.isTicked);
   const progress = task.items.length === 0 ? "" : `${ticked.length} of ${task.items.length}`;
@@ -118,16 +133,7 @@ function Card({ session, errors, isExpanded, dispatch }: CardProps) {
       </header>
       <StateLine session={session} />
       <p class="card-dir">{session.cwd}</p>
-      {!session.isProcessAlive && (
-        <p class="card-stopped">
-          process stopped
-          {session.shortId !== undefined && (
-            <>
-              : <code>claude attach {session.shortId}</code> wakes it
-            </>
-          )}
-        </p>
-      )}
+      <StoppedLine session={session} />
       {errors.map((error, index) => (
         <p key={index} class="card-error">
           {error.source}: {error.message}

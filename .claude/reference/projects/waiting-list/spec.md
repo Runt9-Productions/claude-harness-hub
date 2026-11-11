@@ -51,11 +51,12 @@ What each file in #7 holds. The rules every file follows are in [[Hub Browser Co
   session name, the title cut to one line, and the age. The Tasks column puts the session name above the title
 - [invariant] An open decision shows its context and its options in board order, the recommended one marked
   "(recommended)", with Dismiss. An open owner task shows its description, its checklist as checkboxes, and Start
-  and Done. Every control is disabled and titled "Arrives in a later release"
+  and Done, with "Started" in place of Start once it was pressed. Every control is disabled and titled "Arrives in a
+  later release"
 - [invariant] An item whose session has no process says "process stopped: `claude attach <id>` wakes it", as the
   card does
 - [invariant] "Held in a terminal" sits under the decisions and is absent when no session is held. One line per
-  session: "<name> is waiting on <waitingFor>. Answer it in its terminal.", or "<name> is waiting. Answer it in its
+  session: "<name> is waiting: <waitingFor>. Answer it in its terminal.", or "<name> is waiting. Answer it in its
   terminal." when `waitingFor` is absent
 - [invariant] An empty list keeps its heading with "(0)" and says "No decisions are waiting on you." or "No tasks are
   waiting on you.". An unknown route says so, with a link to the dashboard

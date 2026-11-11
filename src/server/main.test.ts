@@ -205,6 +205,7 @@ void test("each snapshot request reads the session list and the stores under the
       {
         id: "D1",
         rev: 0,
+        createdAt: 1794300420000,
         question: "Split the parser into a lexer and a reader?",
         context: "Splitting costs one more file; keeping it costs a longer function.",
         options: [
@@ -233,6 +234,7 @@ void test("each snapshot request reads the session list and the stores under the
       {
         id: "O1",
         rev: 0,
+        createdAt: 1794300480000,
         title: "Try the new parser on a sample file",
         description: "Any file from example.com will do.",
         items: [

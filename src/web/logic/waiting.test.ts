@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { DecisionView, OwnerTaskView, SessionView } from "../../shared/api.ts";
-import { rowAge, waitingList, type WaitingRow } from "./waiting.ts";
+import { heldLine, rowAge, waitingList, waitingTotal, type WaitingRow } from "./waiting.ts";
 
 function session(key: string, fields: Partial<SessionView> = {}): SessionView {
   return {
@@ -102,6 +102,26 @@ void test("sessions waiting in their terminal are held, by start, with what they
       ["late-held", "permission prompt"],
     ],
   );
+});
+
+void test("a held session says what it waits on when the session list names it, and to answer it in its terminal", () => {
+  const list = waitingList([
+    session("prompted", { name: "export button", status: "waiting", waitingFor: "permission prompt" }),
+    session("fixture-held", { startedAt: 2000, status: "waiting" }),
+  ]);
+  assert.deepEqual(list.held.map(heldLine), [
+    "export button is waiting: permission prompt. Answer it in its terminal.",
+    "fixture-held is waiting. Answer it in its terminal.",
+  ]);
+});
+
+void test("the switcher counts every session's waiting items, and a held session adds nothing of its own", () => {
+  const sessions = [
+    session("busy", { waitingCount: 2 }),
+    session("held-with-items", { status: "waiting", waitingCount: 1 }),
+    session("held", { status: "waiting" }),
+  ];
+  assert.equal(waitingTotal(sessions), 3);
 });
 
 void test("a row's age rounds down to whole minutes, hours past an hour and days past a day, and is absent without createdAt", () => {

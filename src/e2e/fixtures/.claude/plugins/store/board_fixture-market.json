@@ -3,6 +3,7 @@
     "decisions": [
       {
         "id": "D1",
+        "createdAt": 1794300420000,
         "question": "Split the parser into a lexer and a reader?",
         "context": "Splitting costs one more file; keeping it costs a longer function.",
         "options": [
@@ -45,6 +46,7 @@
     "ownerTasks": [
       {
         "id": "O1",
+        "createdAt": 1794300480000,
         "title": "Try the new parser on a sample file",
         "description": "Any file from example.com will do.",
         "items": [
@@ -125,6 +127,21 @@
         "question": "Publish the release notes now?",
         "options": ["Publish them", "Wait for review"],
         "recommended": 1
+      },
+      {
+        "id": "D2",
+        "createdAt": 1794302000000,
+        "question": "Name the release after the month it ships in, or after the largest change it carries, so the notes and the tag agree?",
+        "options": [{ "label": "The month" }, { "label": "The largest change" }]
+      }
+    ],
+    "ownerTasks": [
+      {
+        "id": "O1",
+        "title": "Read the draft release notes on example.com and mark anything that reads as a promise rather than a fact",
+        "items": [],
+        "isStartPressed": true,
+        "isDone": false
       }
     ],
     "savedAt": 1794302100000,

@@ -1,9 +1,10 @@
 import type { ComponentChildren } from "preact";
-import type { DecisionView, OwnerTaskView, Snapshot } from "../../shared/api.ts";
+import type { DecisionView, OwnerTaskView, SessionView, Snapshot } from "../../shared/api.ts";
 import { openRowKey, type OpenRowChoice, type PageDispatch } from "../logic/page-state.ts";
-import { heldLine, rowAge, waitingList, type HeldSession, type WaitingRow } from "../logic/waiting.ts";
-import { StoppedLine } from "./dashboard.tsx";
+import { sessionName } from "../logic/session.ts";
+import { heldLine, rowAge, waitingList, type WaitingRow } from "../logic/waiting.ts";
 import { laterReason } from "./later.ts";
+import { StoppedLine } from "./session.tsx";
 
 type Emphasis = "recommended" | "quiet";
 
@@ -87,7 +88,7 @@ function Row({ row, title, now, isOpen, dispatch, children }: RowProps) {
   return (
     <li class="row" data-open={isOpen}>
       <button type="button" class="row-head" aria-expanded={isOpen} onClick={toggle}>
-        <span class="row-session clip">{row.sessionName}</span>
+        <span class="row-session clip">{sessionName(row.session)}</span>
         <span class="row-title">{title}</span>
         <span class="row-age">{rowAge(row.item.createdAt, now)}</span>
         <span class="row-chevron" aria-hidden="true">
@@ -125,14 +126,14 @@ function RowList({
   );
 }
 
-function Held({ held }: { held: readonly HeldSession[] }) {
+function Held({ held }: { held: readonly SessionView[] }) {
   if (held.length === 0) return null;
   return (
     <section class="row-list">
       <h3 class="group-label">Held in a terminal</h3>
       <ul class="held-lines">
-        {held.map((entry) => (
-          <li key={entry.session.key}>{heldLine(entry)}</li>
+        {held.map((session) => (
+          <li key={session.key}>{heldLine(session)}</li>
         ))}
       </ul>
     </section>

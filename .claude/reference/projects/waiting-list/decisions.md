@@ -22,17 +22,20 @@ Rulings for #7. The design itself is in the hub notes under `domains/hub/`.
   so the list and every count share one rule. This settles the waiting-rule question (owner, 2026-11-11)
 - [proposal] The open row shows a decision's context and options, and an owner task's description and checklist,
   with every button and checkbox disabled and titled "Arrives in a later release", as the dashboard's controls are
-  (open, 2026-11-11)
+  (taken, 2026-11-11)
 - [proposal] With no row chosen, the first row is open: the oldest decision, else the oldest task, as in the mockup
-  (open, 2026-11-11)
+  (taken, 2026-11-11)
 - [proposal] An empty list keeps its heading with "(0)" and says "No decisions are waiting on you." or "No tasks are
-  waiting on you.", as in the mockup (open, 2026-11-11)
-
+  waiting on you.", as in the mockup (taken, 2026-11-11)
 - [decision] The plan in [[Waiting List Spec]] and [[Waiting List Estimate]] is approved: 4 tasks in order (owner,
   2026-11-11)
 - [decision] #7's description is replaced with the issue text in [[Waiting List Spec]] (owner, 2026-11-11)
 - [decision] The run may write `src/`, the fixtures and `.claude/reference/`, and may commit, push and open the draft
   pull request without asking each time (owner, 2026-11-11)
+- [proposal] An owner task whose Start was pressed shows "Started" in place of the Start button, since the read-only
+  view shows the state the board holds (taken, 2026-11-11)
+- [proposal] A row's age reads `5m`, `3h` or `2d`, rounded down, which is shorter than the mockup's "3 min" in a
+  one-line row (taken, 2026-11-11)
 
 ## Open Questions
 

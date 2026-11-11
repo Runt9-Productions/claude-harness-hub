@@ -9,6 +9,7 @@ sources:
   - "src/web/styles.css"
   - "src/web/ui/page.tsx"
   - "src/web/ui/dashboard.tsx"
+  - "src/web/ui/session.tsx"
   - "src/web/ui/waiting.tsx"
   - "src/web/logic/dashboard.ts"
 ---
@@ -62,7 +63,7 @@ Read this before adding a view, a component or a colour to `src/web/`.
 - [fact] A card's parts, top to bottom: a head with a state dot, the name and the waiting count; a line of kind,
   state and mode; the working directory in `--mono`; "process stopped" with the `claude attach` command when no
   process runs, a line the waiting list's open row reuses; the session's errors; the agent tasks (`Card`,
-  `src/web/ui/dashboard.tsx:126`; `StoppedLine`, `src/web/ui/dashboard.tsx:58`)
+  `src/web/ui/dashboard.tsx:126`; `StoppedLine`, `src/web/ui/session.tsx:4`)
 - [fact] A card for a session that needs the owner carries a 3px `--amber` bar on its left edge, drawn with an inset
   `box-shadow` so the content does not shift
 - [fact] The state dot is filled `--amber` when the session needs the owner, filled `--accent` while it works, and a

@@ -7,12 +7,13 @@ import {
   isBlocked,
   isSamePlacement,
   placeInColumns,
-  sessionName,
   sessionState,
   shownTaskCount,
   type Columns,
 } from "../logic/dashboard.ts";
 import type { PageDispatch } from "../logic/page-state.ts";
+import { sessionName } from "../logic/session.ts";
+import { StoppedLine } from "./session.tsx";
 
 function useViewportWidth(): number {
   const [width, setWidth] = useState(window.innerWidth);
@@ -50,21 +51,6 @@ function StateLine({ session }: { session: SessionView }) {
       <span class="mode" data-mode={mode}>
         {mode}
       </span>
-    </p>
-  );
-}
-
-/** "process stopped: `claude attach <id>` wakes it", drawn only when the session has no process. */
-export function StoppedLine({ session }: { session: SessionView }) {
-  if (session.isProcessAlive) return null;
-  return (
-    <p class="stopped">
-      process stopped
-      {session.shortId !== undefined && (
-        <>
-          : <code>claude attach {session.shortId}</code> wakes it
-        </>
-      )}
     </p>
   );
 }

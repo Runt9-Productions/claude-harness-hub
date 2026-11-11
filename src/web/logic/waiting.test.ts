@@ -43,25 +43,15 @@ function keys(rows: readonly WaitingRow<unknown>[]): string[] {
   return rows.map((row) => row.key);
 }
 
-void test("only waiting items are listed, each keyed by session and kind and naming its session as the card does", () => {
+void test("only waiting items are listed, each keyed by session and kind", () => {
   const list = waitingList([
     session("fixture-a", {
-      name: "release notes",
-      shortId: "fixa",
       decisions: [decision("D1"), decision("D2", { isWaiting: false })],
       ownerTasks: [ownerTask("O1"), ownerTask("O2", { isWaiting: false })],
     }),
-    session("fixture-b", { shortId: "fixb", startedAt: 2000, decisions: [decision("D1")] }),
-    session("fixture-c", { startedAt: 3000, decisions: [decision("D1")] }),
+    session("fixture-b", { startedAt: 2000, decisions: [decision("D1")] }),
   ]);
-  assert.deepEqual(
-    list.decisions.map((row) => [row.key, row.sessionName]),
-    [
-      ["fixture-a/decision/D1", "release notes"],
-      ["fixture-b/decision/D1", "fixb"],
-      ["fixture-c/decision/D1", "fixture-c"],
-    ],
-  );
+  assert.deepEqual(keys(list.decisions), ["fixture-a/decision/D1", "fixture-b/decision/D1"]);
   assert.deepEqual(keys(list.ownerTasks), ["fixture-a/owner-task/O1"]);
 });
 
@@ -101,12 +91,12 @@ void test("sessions waiting in their terminal are held, by start, with what they
   const list = waitingList([
     session("late-held", { startedAt: 3000, status: "waiting", waitingFor: "permission prompt" }),
     session("busy", { startedAt: 2000, status: "busy" }),
-    session("early-held", { startedAt: 1000, status: "waiting", name: "docs" }),
+    session("early-held", { startedAt: 1000, status: "waiting" }),
   ]);
   assert.deepEqual(
-    list.held.map((held) => [held.sessionName, held.session.waitingFor]),
+    list.held.map((held) => [held.key, held.waitingFor]),
     [
-      ["docs", undefined],
+      ["early-held", undefined],
       ["late-held", "permission prompt"],
     ],
   );

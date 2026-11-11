@@ -14,6 +14,7 @@ sources:
   - "src/web/logic/dashboard.ts"
   - "src/web/logic/waiting.ts"
   - "src/web/ui/dashboard.tsx"
+  - "src/web/ui/session.tsx"
   - "src/web/ui/page.tsx"
 measured_on: "Claude Code 2.1.319, on Linux"
 ---
@@ -89,7 +90,7 @@ Read this before touching `src/server/sources/`, the snapshot builder in `src/se
   `src/web/logic/dashboard.ts:63`)
 - [invariant] A row with no `pid` is read-only. Its card, and its open row in the waiting list, say "process stopped:
   `claude attach <id>` wakes it" with the short `id`, or only "process stopped" when it has none (`StoppedLine`,
-  `src/web/ui/dashboard.tsx:58`); once awake its `hub` plugin reconnects. A Wake button (`claude respawn <id>`) waits
+  `src/web/ui/session.tsx:4`); once awake its `hub` plugin reconnects. A Wake button (`claude respawn <id>`) waits
   for real use to ask for it
 - [invariant] A session needs the owner when it has an unanswered decision, an unfinished owner task,
   `status: waiting` or `state: blocked`. The hub sets this as `needsYou` on each `SessionView` (`needsYou`,

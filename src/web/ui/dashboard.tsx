@@ -7,6 +7,7 @@ import {
   isBlocked,
   isSamePlacement,
   placeInColumns,
+  sessionName,
   sessionState,
   shownTaskCount,
   type Columns,
@@ -112,7 +113,7 @@ function Card({ session, errors, isExpanded, dispatch }: CardProps) {
     <article class="card" data-needs-you={session.needsYou}>
       <header class="card-head">
         <span class="dot" data-tone={sessionTone(session)} aria-hidden="true" />
-        <h3 class="card-name">{session.name ?? session.shortId ?? session.key}</h3>
+        <h3 class="card-name">{sessionName(session)}</h3>
         {session.waitingCount > 0 && <span class="waiting-count">{session.waitingCount} waiting</span>}
       </header>
       <StateLine session={session} />

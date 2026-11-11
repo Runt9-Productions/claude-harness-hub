@@ -5,7 +5,7 @@ import { startClient } from "./client.ts";
 import { Page } from "./page.tsx";
 
 function App() {
-  const [state, dispatch] = useReducer(pageReducer, initialPageState);
+  const [state, dispatch] = useReducer(pageReducer, location.hash, initialPageState);
   useEffect(() => startClient(dispatch), []);
   return <Page state={state} dispatch={dispatch} />;
 }

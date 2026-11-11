@@ -2,7 +2,7 @@ import type { SessionView, SourceError, TaskView } from "../../shared/api.ts";
 
 export type Groups = { needsYou: SessionView[]; everythingElse: SessionView[] };
 
-function byStart(first: SessionView, second: SessionView): number {
+export function byStart(first: SessionView, second: SessionView): number {
   return first.startedAt - second.startedAt;
 }
 
@@ -16,6 +16,10 @@ export function groupSessions(sessions: readonly SessionView[]): Groups {
     needsYou: sorted.filter((session) => session.needsYou),
     everythingElse: sorted.filter((session) => !session.needsYou),
   };
+}
+
+export function sessionName(session: SessionView): string {
+  return session.name ?? session.shortId ?? session.key;
 }
 
 /**

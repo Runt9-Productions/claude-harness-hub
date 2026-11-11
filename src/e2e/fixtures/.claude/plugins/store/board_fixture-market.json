@@ -1,0 +1,131 @@
+{
+  "session:fixture-session-alpha": {
+    "decisions": [
+      {
+        "id": "D1",
+        "question": "Split the parser into a lexer and a reader?",
+        "context": "Splitting costs one more file; keeping it costs a longer function.",
+        "options": [
+          { "label": "Split it", "description": "Two files, each under a hundred lines" },
+          { "label": "Keep one file" }
+        ],
+        "recommended": 0
+      },
+      {
+        "id": "D2",
+        "question": "Keep the old error messages?",
+        "options": [{ "label": "Keep them" }, { "label": "Reword them" }],
+        "recommended": 1,
+        "answer": "Reword them. Note: shorter ones",
+        "chosenOption": "Reword them",
+        "note": "shorter ones",
+        "delivery": "sent"
+      }
+    ],
+    "tasks": [
+      {
+        "id": "T1",
+        "title": "Move the lexer out",
+        "status": "in_progress",
+        "holderId": "main",
+        "items": [
+          { "label": "Write the lexer", "isTicked": true },
+          { "label": "Point the reader at it", "isTicked": false }
+        ]
+      },
+      {
+        "id": "T2",
+        "title": "Update the parser tests",
+        "status": "blocked",
+        "note": "Waits on the lexer",
+        "items": [{ "label": "Rename the fixtures", "isTicked": false }]
+      },
+      { "id": "T3", "title": "Read the old parser", "status": "done" }
+    ],
+    "ownerTasks": [
+      {
+        "id": "O1",
+        "title": "Try the new parser on a sample file",
+        "description": "Any file from example.com will do.",
+        "items": [
+          { "label": "Run it once", "isTicked": false },
+          { "label": "Compare the output", "isTicked": false }
+        ],
+        "isDone": false
+      }
+    ],
+    "lastTaskNumber": 3,
+    "lastDecisionNumber": 2,
+    "lastOwnerTaskNumber": 1,
+    "savedAt": 1794300300000,
+    "toolUseIds": ["toolu_fixture_alpha_1", "toolu_fixture_alpha_2"]
+  },
+  "session:fixture-session-gamma": {
+    "decisions": [
+      {
+        "id": "D1",
+        "question": "Leave away mode?",
+        "options": [{ "label": "Stay away" }, { "label": "Come back" }],
+        "recommended": 0,
+        "plugin": "away",
+        "isAnswerKept": true,
+        "answer": "Stay away",
+        "chosenOption": "Stay away",
+        "delivery": "seen"
+      }
+    ],
+    "tasks": [
+      {
+        "id": "T1",
+        "title": "Gather the night's numbers",
+        "status": "in_progress",
+        "holderId": "main",
+        "items": [
+          { "label": "Fetch the counts", "isTicked": true },
+          { "label": "Total them", "isTicked": true },
+          { "label": "Write the summary", "isTicked": false }
+        ]
+      },
+      {
+        "id": "T2",
+        "title": "Chart the week",
+        "status": "pending",
+        "items": [{ "label": "Pick the chart", "isTicked": false }]
+      }
+    ],
+    "ownerTasks": [
+      {
+        "id": "O1",
+        "title": "Check the report reads well",
+        "items": [{ "label": "Read the summary", "isTicked": true }],
+        "isStartPressed": true,
+        "isDone": false,
+        "lastChange": {
+          "summary": "ticked \"Read the summary\"",
+          "message": "[board] The owner ticked \"Read the summary\" on O1.",
+          "delivery": "seen"
+        }
+      }
+    ],
+    "savedAt": 1794301500000,
+    "toolUseIds": ["toolu_fixture_gamma_1"]
+  },
+  "session:fixture-session-delta": {
+    "decisions": [
+      {
+        "id": "D1",
+        "question": "Publish the release notes now?",
+        "options": ["Publish them", "Wait for review"],
+        "recommended": 1
+      }
+    ],
+    "tasks": [],
+    "ownerTasks": [],
+    "savedAt": 1794302100000,
+    "toolUseIds": ["toolu_fixture_delta_1"]
+  },
+  "session:fixture-session-retired": {
+    "decisions": { "D1": "an older shape that no listed session uses" },
+    "savedAt": 1794200000000
+  }
+}

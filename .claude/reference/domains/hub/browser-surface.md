@@ -23,7 +23,7 @@ measured_on: "Chrome 157, Node 26.13.0, on Linux under WSL2"
 > the HTTP API with its `Snapshot` type, and how the page polls, as agreed with the owner on 2026-11-08 and 2026-11-09
 > before any hub code existed. On #24 the launch, token, `GET` check, header, CSP and polling lines were checked
 > against the sources listed. On #26 the 500 path, the `Snapshot` and `SessionView` types, the page's snapshot
-> reader and the line numbers cited were checked again. On #7 the `DecisionView` and `OwnerTaskView` types, the
+> reader and the line numbers cited were checked again. On #27 the `DecisionView` and `OwnerTaskView` types, the
 > as-built line, the hub-decided fields line and the launch link line were checked again against `api.ts`, the page's
 > reader and `client.ts`; the other lines checked on #24 and #26 were carried forward without a re-read. The `POST`
 > checks, `POST /api/commands`, the `commands`, `usage`, `activity`, `contextPercent` and `sandboxProblem` fields and

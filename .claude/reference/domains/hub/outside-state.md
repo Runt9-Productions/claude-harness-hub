@@ -25,7 +25,7 @@ measured_on: "Claude Code 2.1.319, on Linux"
 > was agreed with the owner on 2026-11-08 and 2026-11-09; on #26 the session list, store and snapshot lines were
 > checked against the sources listed, and the store field lines against the `board` and `away` plugins' code in
 > runt9-claude-harness at `283ad99`, read only. That code is not in `sources`, so a harness change does not mark this
-> note stale. On #7 the needs-you and waiting line, the stopped line, the error placement line and the waiting items'
+> note stale. On #27 the needs-you and waiting line, the stopped line, the error placement line and the waiting items'
 > order were checked against the snapshot builder, the waiting list logic and the page; the other #26 lines were
 > carried forward without a re-read. Carried forward unchecked, since no code holds them yet: the `hub` plugin's
 > report (its mode and `permissionTool`), the Wake button and plan usage. The store measurements were taken on

@@ -17,7 +17,7 @@ sources:
 
 > **Scope.** The page's colour tokens, the top bar, the dashboard card's parts and the layout rules later views
 > reuse, read from the dashboard's CSS, views and layout logic on #26, and the waiting list's rows and columns, read
-> from its view and CSS on #7. The palette, the card's look and the rows' look follow the owner's mockup, which is not
+> from its view and CSS on #27. The palette, the card's look and the rows' look follow the owner's mockup, which is not
 > in this repository. Not covered: how any of it renders in a browser (no line here was measured), the session view,
 > which is not built, and the CSS rules [[Hub Browser Code]] holds.
 

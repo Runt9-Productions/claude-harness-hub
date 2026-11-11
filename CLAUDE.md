@@ -14,6 +14,8 @@ or a specific machine goes in, in code, comments, docs, tests, commit messages o
   serves the browser and socket routes; `server/main.ts` wires them together behind `start(config)`; `web/logic` is
   the browser's pure logic; `web/ui` holds the Preact views and the client; `e2e` holds the browser tests. What each
   may import is in the architecture note, listed in `.claude/reference/README.md`.
+- `scripts/`: `start-fixture-hub.sh`, the only way verification starts a hub, on the checked-in fixtures.
+- `dist/`: the browser build that `npm start` makes; ignored by git.
 - `.github/workflows/ci.yml`: CI, ending in `gate`, the one required check. The guard scripts, the leak scan and the
   knowledge base validator run from runt9-claude-harness at the commit `HARNESS_SHA` pins there.
 - `.nvmrc`, `package.json`, `package-lock.json`, `.npmrc`: the pinned runtime and toolchain. `tsconfig.json`, `.oxlintrc.json`,
@@ -28,6 +30,8 @@ Run `nvm use` and `npm ci` once, then from the root:
 
 ```
 npx tsc -p tsconfig.json
+npx tsc -p src/web/tsconfig.json
+npx tsc -p src/e2e/tsconfig.json
 npx oxlint -c .oxlintrc.json --type-aware --deny-warnings --report-unused-disable-directives-severity=error src
 npx prettier --check --config .prettierrc.json --ignore-path .prettierignore --no-editorconfig .
 node --test 'src/**/*.test.ts'

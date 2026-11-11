@@ -1,0 +1,4 @@
+#!/bin/sh
+# Stands in for the real CLI, which would list the live sessions on this machine.
+echo "claude fixture stub: no fixture output for: $*" >&2
+exit 1

@@ -157,7 +157,10 @@ jobs:
       # tsc exits non-zero when the project includes no files, so an emptied or moved source tree fails.
       - name: tsc
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: npx --no-install tsc -p tsconfig.json
+        run: |
+          npx --no-install tsc -p tsconfig.json
+          npx --no-install tsc -p src/web/tsconfig.json
+          npx --no-install tsc -p src/e2e/tsconfig.json
 
       # Type-aware and the unused-directive report are set here as well as in the config, so the config cannot turn
       # them off. oxlint exits non-zero when it finds no files to lint.
@@ -190,9 +193,9 @@ jobs:
         run: npm ci
 
       # node --test passes when it finds no tests, so the files are listed and counted. Coverage reports only the
-      # files some test loads, so every server and shared source file must appear in it: a module whose tests were
-      # deleted would otherwise drop out of the report and leave the threshold green. The threshold itself is a
-      # tripwire for tests removed from a file that is still loaded, not a measure of quality.
+      # files some test loads, so every server, shared and browser logic source file must appear in it: a module whose
+      # tests were deleted would otherwise drop out of the report and leave the threshold green. The threshold itself is
+      # a tripwire for tests removed from a file that is still loaded, not a measure of quality.
       - name: node:test with coverage
         run: |
           mapfile -d '' tests < <(git ls-files -z -- ':(glob)src/**/*.test.ts')
@@ -202,11 +205,13 @@ jobs:
           fi
           node --test --experimental-test-coverage \
             --test-coverage-include='src/server/**/*.ts' --test-coverage-include='src/shared/**/*.ts' \
+            --test-coverage-include='src/web/logic/**/*.ts' \
             --test-coverage-exclude='**/*.test.ts' --test-coverage-lines=80 \
             --test-reporter=spec --test-reporter-destination=stdout \
             --test-reporter=lcov --test-reporter-destination="$RUNNER_TEMP/lcov.info" \
             "${tests[@]}"
           mapfile -t sources < <(git ls-files -- ':(glob)src/server/**/*.ts' ':(glob)src/shared/**/*.ts' \
+            ':(glob)src/web/logic/**/*.ts' \
             | /usr/bin/grep -vE '\.(test|d)\.ts$')
           missing=0
           for file in "${sources[@]}"; do

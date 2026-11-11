@@ -1,5 +1,5 @@
 {
-  // Node 24 runs the server's TypeScript directly by stripping types, so nothing is emitted, imports name the .ts
+  // Node 26 runs the server's TypeScript directly by stripping types, so nothing is emitted, imports name the .ts
   // file, and only syntax that erases to JavaScript is allowed.
   "compilerOptions": {
     "target": "es2025",
@@ -20,5 +20,6 @@
     "noUnusedParameters": true,
     "skipLibCheck": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["src/web/ui", "src/e2e"]
 }

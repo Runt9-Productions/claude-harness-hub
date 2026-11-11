@@ -1,4 +1,5 @@
 .claude/output/
 .claude/settings.local.json
 .claude/worktrees/
+dist/
 node_modules/

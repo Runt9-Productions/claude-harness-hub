@@ -3,7 +3,7 @@ title: CI Checks
 type: note
 permalink: ci/overview
 tags: ["ci", "node-test", "coverage", "oxlint", "typescript"]
-verified: 2026-11-08
+verified: 2026-11-11
 coverage: partial
 sources:
   - ".github/workflows/ci.yml"
@@ -13,7 +13,8 @@ measured_on: "Node 26.13.0, npm 11.20.0, TypeScript 7.0.2, oxlint 1.90.0, oxlint
 # CI Checks
 
 > **Scope.** How the tools `.github/workflows/ci.yml` runs behave when they have little or nothing to check, measured
-> on scratch projects before the bootstrap commit. Not covered: Prettier's behaviour on an empty tree, the
+> on scratch projects before the bootstrap commit. On 2026-11-11 the lcov check line was re-read against the `tests`
+> job after it gained `src/web/logic`; the measured lines were not re-run. Not covered: Prettier's behaviour on an empty tree, the
 > harness guard scripts and leak scan (documented in runt9-claude-harness), and zizmor.
 
 Read this before changing a step in the `checks` or `tests` job, or a config one reads, and before reading a green
@@ -29,8 +30,9 @@ Read this before changing a step in the `checks` or `tests` job, or a config one
 - [fact] Once a test loads a file, the threshold applies to it: a file at 75% line coverage failed
   `--test-coverage-lines=95` with exit 1 #measured
 - [trap] The lcov report's `SF:` lines hold paths relative to the working directory, not absolute ones #measured
-- [invariant] The `tests` job's lcov check fails any non-test `.ts` file under `src/server/` or `src/shared/` that is
-  missing from the report; source outside those globs is not checked and needs the step changed
+- [invariant] The `tests` job's lcov check fails any non-test `.ts` file under `src/server/`, `src/shared/` or
+  `src/web/logic/` that is missing from the report; source outside those globs is not checked and needs the step
+  changed
 - [fact] `tsc -p` on a project whose `include` matches no file exits 2 with TS18003 #measured
 - [fact] oxlint exits 1 with "No files found to lint" when the path holds no file #measured
 - [fact] With `--report-unused-disable-directives-severity=error`, an `oxlint-disable-next-line` that suppresses

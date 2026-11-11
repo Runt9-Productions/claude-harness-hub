@@ -57,6 +57,8 @@ a knowledge base note already answers a question, this file points there.
 - Ramp-up: not measured.
 - Briefs stay short: teammates load `CLAUDE.md`, so a brief carries the task, its write scope and what they cannot
   discover, and repeats no repo rule.
+- A teammate loads `CLAUDE.md` as it stood when the lead's session started, not as it stands now. After a merge or
+  fast-forward that changes it, the brief says what changed and tells the teammate to read the current file.
 
 ## 6. Build, test and pre-push
 
@@ -93,7 +95,8 @@ a knowledge base note already answers a question, this file points there.
   reach the real `~/.claude` or live sessions, with no test-only path in the hub's code.
 - Evidence: the steps, what each showed, and screenshots attached with
   `gh pr comment <n> --body-file <file> --attach '<image>#<alt text>'` (gh 2.99 or newer). No scan reads an image, so
-  every image is looked at before it is posted.
+  every image is looked at before it is posted. The attachment upload refuses the bot's App token, so the lead
+  prepares the body file and images and the owner runs that command as a board task.
 - What it cannot show: behaviour with real sessions and the real `hub`, `board` and `away` plugins, which the owner
   tries before merging.
 
@@ -107,7 +110,7 @@ a knowledge base note already answers a question, this file points there.
 ## 9. Review
 
 - Code review: the `lens-review` plugin, with `.claude/code-review-profile.md` and the agent and lenses in
-  `.claude/agents/lens-review/`, run locally. Whether it also runs in CI is being trialled.
+  `.claude/agents/lens-review/`, run locally.
 - When: the test review and the code review each run once per pull request, when it is first pushed: the test review,
   then the code review over the head that carries its fixes. A later push gets CI only; say what changed and the owner
   decides whether it gets another review. A trivial pull request gets neither and opens ready.
@@ -134,7 +137,8 @@ a knowledge base note already answers a question, this file points there.
 
 - Identity: the GitHub App bot, its name and email in `git config claude.botName` and `claude.botEmail`. Commit with
   `TZ=UTC git -c user.name="$(git config claude.botName)" -c user.email="$(git config claude.botEmail)" commit`.
-  Every command that writes a commit takes the same `-c` pair.
+  Every command that writes a commit takes the same `-c` pair. In a worktree-isolated session the hook refuses
+  `$(...)` inside a git command, so read the two keys first and pass their values as literal `-c` strings.
 - Messages and trailers: the trailer lines the harness supplies. A message states the change and its reason.
 - Remote: `bot`, the HTTPS remote. `origin` is SSH and the owner's. A push that adds a commit changing
   `.github/workflows/` is refused for the bot's token, so the owner makes that push over SSH.

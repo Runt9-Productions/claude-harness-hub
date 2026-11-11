@@ -1,0 +1,12 @@
+{
+  // Type-checks src/e2e, which runs under Node and drives a browser, so it has both type sets. Node runs it from its
+  // TypeScript, so nothing is emitted.
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "lib": ["es2025", "dom"],
+    "types": ["node"]
+  },
+  "include": ["."],
+  // Replaces the inherited exclude, which names this directory.
+  "exclude": []
+}

@@ -1,0 +1,17 @@
+{
+  // The browser build: emits src/web and the src/shared file it imports to dist/browser/, keeping their paths under
+  // src/ so relative imports still resolve. Tests run under Node from the root project instead.
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "lib": ["es2025", "dom"],
+    "types": [],
+    "noEmit": false,
+    "rootDir": "..",
+    "outDir": "../../dist/browser",
+    "rewriteRelativeImportExtensions": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact"
+  },
+  "include": ["."],
+  "exclude": ["**/*.test.ts"]
+}

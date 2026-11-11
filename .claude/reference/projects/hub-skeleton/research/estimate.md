@@ -16,10 +16,10 @@ about 28 files. It rests on this slice serving no session data and taking no req
 | 02 Browser page | `src/web/tsconfig.json`, `.oxlintrc.json`, `src/web/logic/*`, `src/web/ui/*`, `src/web/styles.css`, the icon, `package.json` | 250 to 350 | 80 to 150 | Preact under this CSP and repo's strict flags is the main unknown |
 | 03 Fixture script and docs | `scripts/start-fixture-hub.sh`, `src/e2e/fixture-main.ts`, `src/e2e/tsconfig.json`, the stub `claude`, `CLAUDE.md`, the development profile, the hub notes | 60 to 100 | none | Docs move with the code |
 
-Actual, against `main`: 828 production lines in 18 files under `src/` and `scripts/`, 400 test lines in 5 files, and
-533 lines added and 55 removed in 21 config, doc and note files, 44 files in all. Production and tests landed inside
-the estimate; the file count missed the knowledge base notes and this project's own files, the README, the lock file
-and the CI commit.
+Actual, against `main`: 845 production lines in 18 files under `src/` and `scripts/`, 467 test lines in 6 files, and
+550 lines added and 55 removed in 21 config, doc and note files, 45 files in all. Production landed inside the
+estimate and tests just above it, from two review rounds; the file count missed the notes and this project's own
+files, the README, the lock file and the CI commit.
 
 No shipped change has this shape: the repository holds only configuration and CI so far.
 

@@ -38,7 +38,7 @@ function TopBar({ state }: { state: PageState }) {
         </p>
         <label class="set-all">
           Set all sessions
-          <select disabled title={laterReason}>
+          <select name="set-all" disabled title={laterReason}>
             <option>{laterReason}</option>
           </select>
         </label>

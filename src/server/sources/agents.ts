@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 import { delimiter } from "node:path";
 import { z } from "zod";
 import type { SourceError } from "../../shared/api.ts";
+import { issueMessage } from "./issues.ts";
 
 const source = "claude agents";
 const commandArguments = ["agents", "--json", "--all"] as const;
@@ -59,9 +60,18 @@ function unknownValueErrors(row: SessionRow): SourceError[] {
   return errors;
 }
 
-function rowIssueMessage(index: number, issues: readonly z.core.$ZodIssue[]): string {
-  const details = issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`);
-  return `row ${index}: ${details.join("; ")}`;
+// A string `sessionId` wins; failing that, a string `id`.
+const rawKeySchema = z.union([
+  z.object({ sessionId: z.string() }).transform((row) => row.sessionId),
+  z.object({ id: z.string() }).transform((row) => row.id),
+]);
+
+/** Names a dropped row by its key, or by its place in the list when it has none. */
+function droppedRowError(index: number, candidate: unknown, issues: readonly z.core.$ZodIssue[]): SourceError {
+  const details = issueMessage(issues);
+  const key = rawKeySchema.safeParse(candidate);
+  if (!key.success) return { source, message: `row ${index}: ${details}` };
+  return { source, sessionId: key.data, message: details };
 }
 
 function parseList(stdout: string): ParsedList {
@@ -77,7 +87,7 @@ function parseList(stdout: string): ParsedList {
   for (const [index, candidate] of parsed.entries()) {
     const result = rowSchema.safeParse(candidate);
     if (!result.success) {
-      rowErrors.push({ source, message: rowIssueMessage(index, result.error.issues) });
+      rowErrors.push(droppedRowError(index, candidate, result.error.issues));
       continue;
     }
     rows.push(result.data);

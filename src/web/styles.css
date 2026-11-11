@@ -7,6 +7,7 @@
     --dock: #171b20;
     --surface: #1d2328;
     --raised: #293138;
+    --raised-hover: #343d45;
     --line: #3c464f;
     --fg: #e4e7ea;
     --muted: #a6aeb6;
@@ -161,6 +162,10 @@
       background: var(--raised);
       color: var(--fg);
       box-shadow: inset 0 -2px 0 var(--accent);
+
+      &:hover {
+        background: var(--raised-hover);
+      }
     }
 
     &:disabled {

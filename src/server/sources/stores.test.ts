@@ -131,7 +131,7 @@ void test("an entry with an unknown shape is its session's error, and other sess
   const described = errors.map((error) => `${error.source} ${error.sessionId}: ${error.message}`);
   assert.equal(described.length, 2);
   assert.match(described[0] ?? "", /^board store fixture-one: decisions\.0\.question: /);
-  assert.match(described[1] ?? "", /^away store fixture-one: mode: /);
+  assert.match(described[1] ?? "", /^away store fixture-one: mode: Invalid option/);
 });
 
 void test("takes the board entry with the newest savedAt and the mode from the newest away file", async (t) => {

@@ -3,6 +3,7 @@ import { lstat, readdir, readFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { z } from "zod";
 import type { SourceError } from "../../shared/api.ts";
+import { issueMessage } from "./issues.ts";
 
 const boardFileName = /^board_.+\.json$/;
 const awayFileName = /^away_.+\.json$/;
@@ -138,11 +139,6 @@ async function parseStoreFile(path: string): Promise<Record<string, unknown> | u
     // Writes are not known to be atomic, so a half-written file is retried before it counts as an error.
     return undefined;
   }
-}
-
-function issueMessage(issues: readonly z.core.$ZodIssue[]): string {
-  const details = issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`);
-  return details.join("; ");
 }
 
 function savedAtRank(entry: unknown): number {

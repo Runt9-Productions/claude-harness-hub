@@ -88,15 +88,21 @@ void test("keeps a row whose kind, status, state and waitingFor are unknown, wit
   ]);
 });
 
-void test("drops a row missing cwd with an error naming the field, and keeps the other rows", async (t) => {
+void test("drops each row the schema rejects, naming it by sessionId, else id, else its place in the list", async (t) => {
   const { cwd: _cwd, ...rowWithoutCwd } = { ...goodRow, sessionId: "fixture-two" };
-  await stubClaude(t, printing([rowWithoutCwd, goodRow]));
+  const rowWithNumericSessionId = { ...rowWithoutCwd, sessionId: 7, id: "fixture-three" };
+  await stubClaude(t, printing(["not a row", rowWithoutCwd, rowWithNumericSessionId, goodRow]));
 
   const list = await createSessionListSource().read(0);
 
   assert.deepEqual(list.rows, [goodRow]);
-  assert.equal(list.errors.length, 1);
-  assert.match(list.errors[0]?.message ?? "", /^row 0: cwd: /);
+  const [notARow, missingCwd, numericSessionId, ...rest] = list.errors;
+  assert.deepEqual(rest, []);
+  assert.equal(notARow?.sessionId, undefined);
+  assert.match(notARow?.message ?? "", /^row 0: Invalid input/);
+  assert.equal(missingCwd?.sessionId, "fixture-two");
+  assert.match(missingCwd?.message ?? "", /^cwd: Invalid input/);
+  assert.equal(numericSessionId?.sessionId, "fixture-three");
 });
 
 void test("ends a child that ignores SIGTERM at the 5 second timeout", { timeout: 10_000 }, async (t) => {

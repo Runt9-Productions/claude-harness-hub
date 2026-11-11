@@ -213,6 +213,7 @@ void test("each snapshot request reads the session list and the stores under the
         ],
         recommended: 0,
         isAnswerKept: false,
+        isWaiting: true,
       },
       {
         id: "D2",
@@ -221,6 +222,7 @@ void test("each snapshot request reads the session list and the stores under the
         options: [{ label: "Keep them" }, { label: "Reword them" }],
         recommended: 1,
         isAnswerKept: false,
+        isWaiting: false,
         answer: "Reword them. Note: shorter ones",
         chosenOption: "Reword them",
         note: "shorter ones",
@@ -239,6 +241,7 @@ void test("each snapshot request reads the session list and the stores under the
         ],
         isStartPressed: false,
         isDone: false,
+        isWaiting: true,
       },
     ],
     tasks: [
@@ -278,6 +281,7 @@ void test("each snapshot request reads the session list and the stores under the
       items: [{ label: "Read the summary", isTicked: true }],
       isStartPressed: true,
       isDone: true,
+      isWaiting: false,
       lastChange: { summary: 'ticked "Read the summary"', delivery: "seen" },
     },
   ]);

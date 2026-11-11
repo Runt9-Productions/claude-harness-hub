@@ -96,6 +96,7 @@ const decision = objectOf<DecisionView>((fields) => ({
   ...fields.optional("askedBy", string),
   ...fields.optional("plugin", string),
   isAnswerKept: fields.required("isAnswerKept", boolean),
+  isWaiting: fields.required("isWaiting", boolean),
   ...fields.optional("answer", string),
   ...fields.optional("chosenOption", string),
   ...fields.optional("note", string),
@@ -117,6 +118,7 @@ const ownerTask = objectOf<OwnerTaskView>((fields) => ({
   items: fields.required("items", listOf(item)),
   isStartPressed: fields.required("isStartPressed", boolean),
   isDone: fields.required("isDone", boolean),
+  isWaiting: fields.required("isWaiting", boolean),
   ...fields.optional("lastChange", lastChange),
 }));
 

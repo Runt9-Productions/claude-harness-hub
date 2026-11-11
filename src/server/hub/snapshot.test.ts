@@ -80,11 +80,19 @@ void test("a session needs the owner for an unanswered decision, an unfinished o
   ]);
 });
 
-void test("the waiting count holds unanswered decisions and unfinished owner tasks", () => {
-  const snapshot = build([row("mixed", { pid: 1 })], {
+void test("an unanswered decision and an unfinished owner task are waiting, answered and done ones are not, and the count holds the waiting ones", () => {
+  const [session] = build([row("mixed", { pid: 1 })], {
     mixed: boardWith([unansweredDecision, answeredDecision], [openOwnerTask, doneOwnerTask]),
-  });
-  assert.equal(snapshot.sessions[0]?.waitingCount, 2);
+  }).sessions;
+  assert.deepEqual(
+    session?.decisions.map((decision) => decision.isWaiting),
+    [true, false],
+  );
+  assert.deepEqual(
+    session.ownerTasks.map((ownerTask) => ownerTask.isWaiting),
+    [true, false],
+  );
+  assert.equal(session.waitingCount, 2);
 });
 
 void test("only named fields reach the view: no agentId, and no note before a decision is answered", () => {
@@ -104,10 +112,12 @@ void test("only named fields reach the view: no agentId, and no note before a de
   const stored = { board: { decisions: [draftNote, answeredBySubagent], tasks: [], ownerTasks: [ownerTask] } };
   const [session] = build([row("example", { pid: 1 })], { example: stored }).sessions;
   assert.deepEqual(session?.decisions, [
-    unansweredDecision,
-    { ...answeredDecision, id: "D2", note: "shorter", delivery: "sent" },
+    { ...unansweredDecision, isWaiting: true },
+    { ...answeredDecision, id: "D2", isWaiting: false, note: "shorter", delivery: "sent" },
   ]);
-  assert.deepEqual(session.ownerTasks, [{ ...openOwnerTask, lastChange: { summary: "ticked", delivery: "sent" } }]);
+  assert.deepEqual(session.ownerTasks, [
+    { ...openOwnerTask, isWaiting: true, lastChange: { summary: "ticked", delivery: "sent" } },
+  ]);
   assert.equal(session.hasUnreadAnswers, false, "an answer sent to a subagent is not the main agent's unread answer");
 });
 

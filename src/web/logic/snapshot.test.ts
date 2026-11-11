@@ -45,6 +45,7 @@ const fullSession: SessionView = {
       askedBy: "main",
       plugin: "watcher",
       isAnswerKept: true,
+      isWaiting: false,
       answer: "Ship. Note: soon",
       chosenOption: "Ship",
       note: "soon",
@@ -62,6 +63,7 @@ const fullSession: SessionView = {
       items: [{ label: "Run it", isTicked: true }],
       isStartPressed: true,
       isDone: false,
+      isWaiting: true,
       lastChange: { summary: "ticked", delivery: "sent" },
     },
   ],
@@ -124,6 +126,14 @@ void test("a session that does not fit throws with the path to the field", () =>
   assert.throws(
     () => readSnapshot(withSession({ decisions: [{ ...fullSession.decisions[0], delivery: "lost" }] })),
     /field decisions entry 0 field delivery is not one of/,
+  );
+  assert.throws(
+    () => readSnapshot(withSession({ decisions: [{ ...fullSession.decisions[0], isWaiting: undefined }] })),
+    /field decisions entry 0 field isWaiting is not a boolean/,
+  );
+  assert.throws(
+    () => readSnapshot(withSession({ ownerTasks: [{ ...fullSession.ownerTasks[0], isWaiting: undefined }] })),
+    /field ownerTasks entry 0 field isWaiting is not a boolean/,
   );
   assert.throws(
     () => readSnapshot(withSession({ ownerTasks: [{ ...fullSession.ownerTasks[0], items: [{ label: "Run it" }] }] })),

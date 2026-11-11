@@ -3,7 +3,7 @@ title: Waiting List
 type: note
 permalink: projects/waiting-list/overview
 tags: ["waiting-list", "decisions", "owner-tasks", "browser"]
-status: implementation
+status: complete
 opened: "2026-11-11"
 ---
 
@@ -11,11 +11,12 @@ opened: "2026-11-11"
 
 Issue #7: the "Everything waiting" view. Every unanswered decision and unfinished owner task across sessions shows in
 one place, as two lists, oldest first, with one row open at a time. The view is read-only until #11 adds answering. It
-ends when that pull request merges.
+ends when #27 merges.
 
 ## Where it stands
 
-- [status] Being built from the checklist
+- [status] Built: `isWaiting` from the hub, the `#/waiting` route, the two oldest-first lists with one read-only row
+  open, and the sessions held in a terminal. Its durable facts are in the hub notes under `domains/hub/`
 
 ## Documents
 

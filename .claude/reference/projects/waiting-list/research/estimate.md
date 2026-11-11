@@ -29,3 +29,18 @@ reuses the reader, the top bar and the tokens, and has no column placement, so i
 - Not verified: how much the CSS needs for the open row; it could run to the top of the range
 - Not verified: #26's notes and tests ran to twice what was estimated, mostly from the review rounds; the ranges above
   are for the build and leave that out
+
+## Actual
+
+Against `main` when #27 was finished: production `src` came to 16 files, +682 / -49, and tests and fixtures to 8
+files, +310 / -11. The whole diff was 36 files, +1,385 / -125, and the notes alone were +393 / -65.
+
+| Piece | Production | Estimate |
+|---|---|---|
+| 01 `isWaiting` (`src/shared`, `src/server`) | +7 / -3 | 15 to 30 |
+| 02 Logic (`src/web/logic`) | +174 / -7 | 110 to 160 |
+| 03 View (`src/web/ui`, `styles.css`) | +501 / -39 | 300 to 420 |
+
+Production came in just above the range and tests inside it. The view missed: CSS was +223 on its own, and the
+read-only open row, the unknown route and the shared session helpers added view code the estimate didn't list. The
+notes came to about 390 lines against 30 to 60, as on #26.

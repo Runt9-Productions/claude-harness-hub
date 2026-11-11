@@ -28,15 +28,13 @@ a knowledge base note already answers a question, this file points there.
 
 ## 3. Worktree and working directory
 
-- No `.worktreeinclude` and no `worktree.*` settings, so Claude Code's defaults apply. A new worktree needs `npm ci`
-  once before any check.
-- Renaming the branch: not measured here.
-- Shared with the main checkout: the git config, so `core.hooksPath` and the `claude.*` keys apply in every
-  worktree.
-- Working directory: `.claude/output/<ticket>/` in the checkout the session works in, ignored by the tracked
-  `.gitignore`. It is scratch and goes when the worktree does. No comment or doc may point at it.
-- Fresh session: yes, started with `claude --worktree <name>`, because a session's language server stays rooted where
-  the session started.
+- No worktree: the session that plans a ticket builds it in the main checkout, on the ticket's branch, created from
+  `main` before the spec is written. Only one session works on the hub at a time, so a worktree only splits the spec
+  from the build. This changes when sessions run in parallel.
+- Working directory: `.claude/output/<ticket>/` in the main checkout, ignored by the tracked `.gitignore`. It is
+  scratch. No comment or doc may point at it.
+- Fresh session: no. The planning session builds, and compacts only when its context nears the point the
+  `delegation` skill gives.
 
 ## 4. Spec location
 
@@ -114,7 +112,7 @@ a knowledge base note already answers a question, this file points there.
 - When: the test review and the code review each run once per pull request, when it is first pushed: the test review,
   then the code review over the head that carries its fixes. A later push gets CI only; say what changed and the owner
   decides whether it gets another review. A trivial pull request gets neither and opens ready.
-- Test review: `.claude/test-review-profile.md` exists. Run `/test-review` in the pull request's worktree before the
+- Test review: `.claude/test-review-profile.md` exists. Run `/test-review` on the pull request's branch before the
   code review. Skipped when the pull request changes no test.
 - Code review: invoke `/lens-review <n> auto` as a skill in the session doing the work, so the owner sees the run:
   never a headless or background run. The session runs in auto mode or with prompts, never a bypass mode.

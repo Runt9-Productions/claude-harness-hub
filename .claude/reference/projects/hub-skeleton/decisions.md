@@ -33,9 +33,10 @@ Rulings for the first slice. The design itself is in the hub notes under `domain
 - [decision] The bot commits the owner's Preact install in `package.json` and `package-lock.json`, with the `start`
   script, alongside task 02, since the pre-push hook takes only the bot's commits (owner, 2026-11-11)
 
-- [proposal] `fixture-main.ts` refuses to start unless `HOME` and `CLAUDE_CONFIG_DIR` sit under the temporary
-  directory, so a direct run cannot reach the real config dir once the hub reads one (kept, open)
+- [decision] `fixture-main.ts` refuses to start unless `HOME` and `CLAUDE_CONFIG_DIR` sit under the temporary
+  directory, so a direct run cannot reach the real config dir once the hub reads one (owner, 2026-11-11)
 
 ## Open Questions
 
-None.
+- [question] Whether the refused-link notice keeps saying the link is "from an earlier run", which is false for a
+  forged link, or says only that the running hub did not accept it

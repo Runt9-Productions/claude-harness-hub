@@ -42,9 +42,9 @@ export function readSnapshot(body: unknown): Snapshot {
   const now = body["now"];
   if (typeof now !== "number") throw new Error("snapshot field now is not a number");
   const sessions = body["sessions"];
-  // No source lists sessions yet, so the type allows only an empty list.
-  if (!Array.isArray(sessions) || sessions.length > 0) throw new Error("snapshot field sessions is not an empty list");
+  if (!Array.isArray(sessions)) throw new Error("snapshot field sessions is not a list");
   const errors = body["errors"];
   if (!Array.isArray(errors)) throw new Error("snapshot field errors is not a list");
+  // The page shows no session yet, so sessions are left unread rather than narrowed.
   return { runId: readString(body, "runId", "snapshot"), now, sessions: [], errors: errors.map(readSourceError) };
 }

@@ -9,8 +9,8 @@ tags: ["dashboard"]
 
 ## Status
 
-- **Live item:** 03 Snapshot
-- **How far along:** 01 and 02 committed; 03 in progress
+- **Live item:** 04 Dashboard view
+- **How far along:** 01 to 03 committed; 04 in progress
 - **Blocked on:** nothing
 - **Last moved:** 2026-11-11
 
@@ -25,7 +25,7 @@ Each source stands alone, the snapshot needs both, the view needs the snapshot, 
 - [x] 01 Session list source: `src/server/sources/agents.ts`, its schema, the stub `claude` serving fixture output,
   and tests
 - [x] 02 Store source: `src/server/sources/stores.ts`, the board and away schemas, fixture stores, and tests
-- [ ] 03 Snapshot: the shared view types, `src/server/hub/` building `SessionView`s, `start(config)` taking the config
+- [x] 03 Snapshot: the shared view types, `src/server/hub/` building `SessionView`s, `start(config)` taking the config
   dir and running the sources on each snapshot request, and tests through `start`
 - [ ] 04 Dashboard view: the browser's snapshot reader, grouping and columns in `src/web/logic`, the top bar and
   cards in `src/web/ui`, the palette and card CSS, and the style guide note

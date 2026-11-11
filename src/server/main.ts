@@ -1,17 +1,24 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { once } from "node:events";
 import { createServer } from "node:http";
+import { homedir } from "node:os";
+import { isAbsolute, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { launchLink, type Snapshot } from "../shared/api.ts";
 import { buildAssetTable, iconUrl, importMap, pageScriptUrl, stylesheetUrl } from "./http/assets.ts";
 import { createBrowserHandler, createClientErrorHandler } from "./http/browser.ts";
+import { buildSnapshot } from "./hub/snapshot.ts";
+import { createSessionListSource } from "./sources/agents.ts";
+import { createStoreSource } from "./sources/stores.ts";
 
 export type HubConfig = {
   /** 0 picks a free port. */
   port: number;
   /** The directory holding `dist/browser/`, `src/web/` and `node_modules/preact/`. */
   assetRoot: string;
+  /** Where the `board` and `away` stores live, under `plugins/store/`. */
+  configDir: string;
 };
 
 export type RunningHub = { port: number; token: string; close: () => Promise<void> };
@@ -43,7 +50,19 @@ export async function start(config: HubConfig): Promise<RunningHub> {
   const assets = buildAssetTable(config.assetRoot);
   const importMapText = JSON.stringify(importMap);
   const page = pageHtml(importMapText);
-  const snapshot = (): Snapshot => ({ runId, now: Date.now(), sessions: [], errors: [] });
+  const sessionList = createSessionListSource();
+  const stores = createStoreSource(config.configDir);
+
+  async function snapshot(): Promise<Snapshot> {
+    const now = Date.now();
+    const list = await sessionList.read(now);
+    const sessionIds: string[] = [];
+    for (const row of list.rows) {
+      if (row.sessionId !== undefined) sessionIds.push(row.sessionId);
+    }
+    const stored = await stores.read(sessionIds, now);
+    return buildSnapshot({ runId, now, list, stores: stored });
+  }
 
   // Node answers a missing Host itself, without the fixed headers, unless told not to; the handler's Host check refuses it.
   const server = createServer({ requireHostHeader: false });
@@ -87,6 +106,13 @@ function isAddressInUse(error: unknown): boolean {
   return error instanceof Error && "code" in error && error.code === "EADDRINUSE";
 }
 
+function configDirFromEnvironment(): string {
+  const configured = process.env["CLAUDE_CONFIG_DIR"];
+  if (configured === undefined) return join(homedir(), ".claude");
+  if (!isAbsolute(configured)) throw new Error("CLAUDE_CONFIG_DIR is not an absolute path");
+  return configured;
+}
+
 async function runFromCommandLine(): Promise<void> {
   if (!process.stdout.isTTY) {
     console.error("hub: stdout is not a terminal, and the launch link is printed only to one; not starting");
@@ -98,7 +124,7 @@ async function runFromCommandLine(): Promise<void> {
   const assetRoot = fileURLToPath(new URL("../../", import.meta.url));
   let hub: RunningHub;
   try {
-    hub = await start({ port, assetRoot });
+    hub = await start({ port, assetRoot, configDir: configDirFromEnvironment() });
   } catch (error: unknown) {
     if (!isAddressInUse(error)) throw error;
     console.error(`hub: port ${port} is busy; not starting`);

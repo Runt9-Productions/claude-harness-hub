@@ -33,6 +33,17 @@ Rulings for #6. The design itself is in the hub notes under `domains/hub/`.
 - [proposal] zod 4.6.7, the newest release, which clears the 7 day rule; it has no dependencies, no `bin` and no
   install scripts (open)
 
+- [proposal] `src/server/hub/snapshot.ts` declares the input types it reads (a listed session, a stored board, a
+  mode) structurally, because the import rules let `hub` import only `shared`; `main.ts` passes the sources' output,
+  and `tsc` checks that it fits there (taken, 2026-11-11)
+- [proposal] Task 05 corrects the outside state note: neither plugin's README lists the store fields (they are in
+  `board`'s types and save code), and several fields are optional with a meaning when absent (taken, 2026-11-11)
+
+- [proposal] `SessionView` gains `needsYou`, computed in `hub`, so the rule lives in one place for the dashboard and
+  the waiting list; task 05 adds it to the browser surface note's type (taken, 2026-11-11)
+- [proposal] The browser handler's snapshot function becomes async, since both sources are, and each request still
+  runs them (taken, 2026-11-11)
+
 ## Open Questions
 
 None.

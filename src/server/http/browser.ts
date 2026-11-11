@@ -12,7 +12,7 @@ export type BrowserHandlerConfig = {
   /** The inline import map's exact text, whose hash `script-src` allows. */
   importMap: string;
   assets: ReadonlyMap<string, Asset>;
-  snapshot: () => Snapshot;
+  snapshot: () => Promise<Snapshot>;
 };
 
 type Route = { kind: "page" } | { kind: "snapshot" } | { kind: "asset"; asset: Asset };
@@ -81,6 +81,21 @@ function plain(status: number, text: string, headers: Record<string, string> = {
   return { status, contentType: "text/plain; charset=utf-8", body: text, headers };
 }
 
+const identifierPattern = /^[A-Za-z0-9_]+$/;
+
+/**
+ * The error's name, code and stack frames, and never its message, which can quote board text. The frames are only the
+ * `at` lines, since the stack's opening lines repeat the message.
+ */
+function failureDescription(error: unknown): string {
+  if (!(error instanceof Error)) return `a thrown ${typeof error}`;
+  const code = "code" in error ? String(error.code) : "";
+  const parts = [identifierPattern.test(error.name) ? error.name : "an unnamed error"];
+  if (identifierPattern.test(code)) parts.push(code);
+  const frames = (error.stack ?? "").split("\n").filter((line) => /^\s+at /.test(line));
+  return [parts.join(" "), ...frames].join("\n");
+}
+
 /** The raw path, unnormalised, so only a URL spelled exactly as a route matches it. */
 function requestPath(url: string): string {
   const queryStart = url.indexOf("?");
@@ -119,7 +134,7 @@ export function createBrowserHandler(config: BrowserHandlerConfig) {
     }
     if (route.kind === "page") return { status: 200, contentType: "text/html; charset=utf-8", body: config.page };
     if (route.kind === "snapshot") {
-      return { status: 200, contentType: "application/json", body: JSON.stringify(config.snapshot()) };
+      return { status: 200, contentType: "application/json", body: JSON.stringify(await config.snapshot()) };
     }
     return { status: 200, contentType: route.asset.contentType, body: await readFile(route.asset.file) };
   }
@@ -129,7 +144,10 @@ export function createBrowserHandler(config: BrowserHandlerConfig) {
     try {
       answer = await reply(request);
     } catch (error: unknown) {
-      console.error(`hub: ${request.method ?? "?"} request failed:`, error);
+      const path = requestPath(request.url ?? "");
+      // Only a matched route's path is logged, since that is one of the hub's own fixed strings.
+      const route = findRoute(path) === undefined ? "an unrouted path" : path;
+      console.error(`hub: ${route} failed: ${failureDescription(error)}`);
       answer = plain(500, "Internal error");
     }
     response.writeHead(answer.status, { ...commonHeaders, ...answer.headers, "Content-Type": answer.contentType });

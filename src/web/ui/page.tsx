@@ -18,7 +18,7 @@ function Notices({ state }: { state: ConnectionState }) {
       )}
       {state.isLinkRejected && (
         <p class="notice" role="status">
-          That link is from an earlier run of the hub. Open the link it printed most recently.
+          Invalid token.
         </p>
       )}
     </>

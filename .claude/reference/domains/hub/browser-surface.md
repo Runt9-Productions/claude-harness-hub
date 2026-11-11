@@ -49,8 +49,8 @@ header.
 
 - [invariant] `client.ts` handles `#t=` on load and on `hashchange`: it replaces the hash with `#/`, sends
   `GET /api/snapshot` with the candidate, and saves it to `localStorage` only on a 200. On a 401 it keeps the stored
-  token and says the link is from an earlier run. A `#t=` value that is not base64url gets the same notice and sends
-  no request (`takeLaunchLink`, `src/web/ui/client.ts:54`)
+  token and says only "Invalid token.", since it cannot tell a stale link from a forged one. A `#t=` value that is
+  not base64url gets the same notice and sends no request (`takeLaunchLink`, `src/web/ui/client.ts:54`)
 - [fact] A page on another origin navigating a hub tab to `#t=x` signed out a tab that saved the token first, and
   left a tab that verified first at 200 with its token unchanged #measured (private Chrome, 2026-11-08)
 - [invariant] Every `/api/*` request sends `Authorization: Bearer <token>`. The server hashes both sides and compares

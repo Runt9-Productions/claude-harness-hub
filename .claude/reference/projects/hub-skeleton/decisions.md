@@ -36,7 +36,9 @@ Rulings for the first slice. The design itself is in the hub notes under `domain
 - [decision] `fixture-main.ts` refuses to start unless `HOME` and `CLAUDE_CONFIG_DIR` sit under the temporary
   directory, so a direct run cannot reach the real config dir once the hub reads one (owner, 2026-11-11)
 
+- [decision] The refused-link notice says only that the token is invalid, nothing about where it came from or what
+  it could be, settling whether it keeps "from an earlier run" (owner, 2026-11-11)
+
 ## Open Questions
 
-- [question] Whether the refused-link notice keeps saying the link is "from an earlier run", which is false for a
-  forged link, or says only that the running hub did not accept it
+None.

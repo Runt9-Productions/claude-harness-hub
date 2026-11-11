@@ -17,6 +17,7 @@ Notes an agent reads before the code or the tool behaviour they cover. The forma
 | [Hub Tests](domains/hub/tests.md) | writing a test, a fixture or the fixture script |
 | [Claude Agents JSON List](domains/platform/claude-agents-json.md) | writing the session list's schema or fixtures |
 | [Chrome Hidden Tab Timers](domains/platform/chrome-hidden-tab-timers.md) | changing the poll interval or relying on Chrome to slow a hidden tab |
+| [Hub Skeleton](projects/hub-skeleton/overview.md) | building the first slice, issue #5 |
 
 ## Local conventions
 

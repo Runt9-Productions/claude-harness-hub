@@ -48,6 +48,10 @@ Rulings for the first slice. The design itself is in the hub notes under `domain
 - [decision] After a snapshot the page cannot read, the failure banner stays and a visibility change may resume
   polling behind it (owner, 2026-11-11)
 
+- [decision] The `clientError` handler writes its reply even when a response is already in flight on the socket,
+  rather than reading Node's private `socket._httpMessage` to skip it; the socket closes either way (owner,
+  2026-11-11)
+
 ## Open Questions
 
 None.

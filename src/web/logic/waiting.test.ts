@@ -47,6 +47,7 @@ void test("only waiting items are listed, each keyed by session and kind and nam
   const list = waitingList([
     session("fixture-a", {
       name: "release notes",
+      shortId: "fixa",
       decisions: [decision("D1"), decision("D2", { isWaiting: false })],
       ownerTasks: [ownerTask("O1"), ownerTask("O2", { isWaiting: false })],
     }),
@@ -64,11 +65,17 @@ void test("only waiting items are listed, each keyed by session and kind and nam
   assert.deepEqual(keys(list.ownerTasks), ["fixture-a/owner-task/O1"]);
 });
 
-void test("each list runs oldest first: by createdAt or the session's start, created items first, then id number, then id", () => {
+void test("each list runs oldest first: by createdAt or the session's start, created items first, then id number with unnumbered ids last, then id", () => {
   const list = waitingList([
     session("early", {
       startedAt: 1000,
-      decisions: [decision("D10"), decision("E2"), decision("D2"), decision("D7", { createdAt: 3000 })],
+      decisions: [
+        decision("flag"),
+        decision("D10"),
+        decision("E2"),
+        decision("D2"),
+        decision("D7", { createdAt: 3000 }),
+      ],
       ownerTasks: [ownerTask("O2", { createdAt: 4000 })],
     }),
     session("late", {
@@ -83,6 +90,7 @@ void test("each list runs oldest first: by createdAt or the session's start, cre
     "early/decision/D2",
     "early/decision/E2",
     "early/decision/D10",
+    "early/decision/flag",
     "early/decision/D7",
     "late/decision/D4",
   ]);

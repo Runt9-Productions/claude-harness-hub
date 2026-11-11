@@ -81,12 +81,18 @@ void test("a session needs the owner for an unanswered decision, an unfinished o
 });
 
 void test("an unanswered decision and an unfinished owner task are waiting, answered and done ones are not, and the count holds the waiting ones", () => {
+  const answeredInOwnWords = {
+    ...unansweredDecision,
+    id: "D3",
+    answer: "Neither, ask again later",
+    delivery: "sent" as const,
+  };
   const [session] = build([row("mixed", { pid: 1 })], {
-    mixed: boardWith([unansweredDecision, answeredDecision], [openOwnerTask, doneOwnerTask]),
+    mixed: boardWith([unansweredDecision, answeredDecision, answeredInOwnWords], [openOwnerTask, doneOwnerTask]),
   }).sessions;
   assert.deepEqual(
     session?.decisions.map((decision) => decision.isWaiting),
-    [true, false],
+    [true, false, false],
   );
   assert.deepEqual(
     session.ownerTasks.map((ownerTask) => ownerTask.isWaiting),

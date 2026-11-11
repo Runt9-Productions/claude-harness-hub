@@ -51,6 +51,7 @@ void test("counts sessions by the state each card shows, the states that need th
     session("background-busy", { kind: "background", state: "working", status: "busy" }),
     session("stopped", { kind: "background", state: "stopped", isProcessAlive: false }),
     session("prompt", { kind: "background", state: "working", status: "waiting", waitingFor: "permission prompt" }),
+    session("paused", { kind: "background", state: "paused", isProcessAlive: false }),
     session("blocked", { kind: "background", state: "blocked", isProcessAlive: false }),
   ]);
   assert.deepEqual(counts, [
@@ -59,6 +60,7 @@ void test("counts sessions by the state each card shows, the states that need th
     ["working", 2],
     ["idle", 1],
     ["stopped", 1],
+    ["paused", 1],
   ]);
 });
 

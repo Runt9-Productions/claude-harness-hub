@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { chmod, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { homedir, tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { test, type TestContext } from "node:test";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -51,12 +51,17 @@ function printing(list: unknown[]): string {
   return `cat <<'LIST'\n${JSON.stringify(list)}\nLIST`;
 }
 
-async function readUntilError(sessions: SessionListSource, now: number): Promise<SessionList> {
-  for (;;) {
+async function readUntil(
+  sessions: SessionListSource,
+  now: number,
+  isWanted: (list: SessionList) => boolean,
+): Promise<SessionList> {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
     const list = await sessions.read(now);
-    if (list.errors.length > 0) return list;
+    if (isWanted(list)) return list;
     await sleep(20);
   }
+  throw new Error(`no read at ${now} gave the wanted list`);
 }
 
 void test("reads the fixture list from the stub claude, passing over one under node_modules/.bin", async (t) => {
@@ -116,13 +121,13 @@ void test("ends a child that ignores SIGTERM at the 5 second timeout", { timeout
 });
 
 void test(
-  "answers with the last list at once, refreshes at most every 3 seconds, and keeps the list when a call fails",
+  "answers with the last list at once, refreshes at most every 3 seconds, and keeps the list when a call fails until a good call clears the error",
   { timeout: 10_000 },
   async (t) => {
     const stub = await stubClaude(t, printing([goodRow]));
     const sessions = createSessionListSource();
     assert.deepEqual(await sessions.read(0), { rows: [goodRow], errors: [] });
-    await writeScript(stub, "exit 3");
+    await writeScript(stub, "echo 'example session text' >&2\nexit 3");
 
     await sessions.read(2999);
     await sleep(300);
@@ -136,10 +141,66 @@ void test(
       { rows: [goodRow], errors: [] },
       "the refresh does not hold the request",
     );
-    const list = await readUntilError(sessions, 3000);
+    const failed = await readUntil(sessions, 3000, (list) => list.errors.length > 0);
+    assert.deepEqual(
+      failed,
+      {
+        rows: [goodRow],
+        errors: [{ source: "claude agents", message: "claude agents --json --all exited with code 3" }],
+      },
+      "the error names the exit code and quotes none of stderr",
+    );
 
-    assert.deepEqual(list.rows, [goodRow]);
-    assert.equal(list.errors.length, 1);
-    assert.match(list.errors[0]?.message ?? "", /exited with code 3/);
+    const renamed = { ...goodRow, name: "Renamed" };
+    await writeScript(stub, printing([renamed]));
+    const recovered = await readUntil(sessions, 6000, (list) => list.errors.length === 0);
+    assert.deepEqual(recovered, { rows: [renamed], errors: [] });
   },
 );
+
+void test("a clock set back counts as due, so the list still refreshes", async (t) => {
+  const stub = await stubClaude(t, printing([goodRow]));
+  const sessions = createSessionListSource();
+  await sessions.read(5000);
+  const renamed = { ...goodRow, name: "Renamed" };
+  await writeScript(stub, printing([renamed]));
+
+  const list = await readUntil(sessions, 1000, (read) => read.rows[0]?.name === "Renamed");
+
+  assert.deepEqual(list.rows, [renamed]);
+});
+
+void test("starts no second call while one is running", async (t) => {
+  const calls = join(await makeDirectory(t), "calls");
+  await stubClaude(t, `echo call >> '${calls}'\nsleep 0.3\n${printing([goodRow])}`);
+  const sessions = createSessionListSource();
+
+  await Promise.all([sessions.read(0), sessions.read(5000)]);
+
+  assert.equal(await readFile(calls, "utf8"), "call\n");
+});
+
+void test("runs claude from the home directory", async (t) => {
+  await stubClaude(t, `printf '[{"cwd":"%s","kind":"interactive","startedAt":1}]' "$(pwd -P)"`);
+
+  const list = await createSessionListSource().read(0);
+
+  assert.deepEqual(
+    list.rows.map((row) => row.cwd),
+    [await realpath(homedir())],
+  );
+});
+
+void test("output that is not a JSON list is an error, with no rows", async (t) => {
+  const stub = await stubClaude(t, "echo 'not json'");
+  assert.deepEqual(await createSessionListSource().read(0), {
+    rows: [],
+    errors: [{ source: "claude agents", message: "printed something other than JSON" }],
+  });
+
+  await writeScript(stub, `echo '{"sessions": []}'`);
+  assert.deepEqual(await createSessionListSource().read(0), {
+    rows: [],
+    errors: [{ source: "claude agents", message: "printed JSON that is not a list" }],
+  });
+});

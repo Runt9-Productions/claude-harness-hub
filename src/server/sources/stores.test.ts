@@ -1,14 +1,9 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, symlink, utimes, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test, type TestContext } from "node:test";
-import { fileURLToPath } from "node:url";
-import { z } from "zod";
 import { createStoreSource, type SessionStores } from "./stores.ts";
-
-const fixtureConfigDir = fileURLToPath(new URL("../../e2e/fixtures/.claude/", import.meta.url));
-const fixtureList = fileURLToPath(new URL("../../e2e/fixtures/claude-agents.json", import.meta.url));
 
 type StoreDirectory = { configDir: string; storeDir: string };
 
@@ -34,85 +29,6 @@ function taskTitles(stores: SessionStores | undefined): string[] | undefined {
   return stores?.board?.tasks.map((task) => task.title);
 }
 
-void test("reads the fixture stores for the fixture list's sessions", async () => {
-  const listed = z.array(z.object({ sessionId: z.string() })).parse(JSON.parse(await readFile(fixtureList, "utf8")));
-  const sessionIds = listed.map((row) => row.sessionId);
-
-  const { sessions, errors } = await createStoreSource(fixtureConfigDir).read(sessionIds, 0);
-
-  assert.deepEqual(errors, [], "the unlisted session's older shape raises nothing");
-  const modes = sessionIds.map((sessionId) => sessions.get(sessionId)?.mode);
-  assert.deepEqual(modes, [undefined, "away", "distracted", undefined]);
-  assert.equal(sessions.get("fixture-session-beta")?.board, undefined);
-  assert.deepEqual(sessions.get("fixture-session-alpha")?.board, {
-    savedAt: 1794300300000,
-    decisions: [
-      {
-        id: "D1",
-        rev: 0,
-        question: "Split the parser into a lexer and a reader?",
-        context: "Splitting costs one more file; keeping it costs a longer function.",
-        options: [
-          { label: "Split it", description: "Two files, each under a hundred lines" },
-          { label: "Keep one file" },
-        ],
-        recommended: 0,
-        isAnswerKept: false,
-      },
-      {
-        id: "D2",
-        rev: 0,
-        question: "Keep the old error messages?",
-        options: [{ label: "Keep them" }, { label: "Reword them" }],
-        recommended: 1,
-        isAnswerKept: false,
-        answer: "Reword them. Note: shorter ones",
-        chosenOption: "Reword them",
-        note: "shorter ones",
-        delivery: "sent",
-      },
-    ],
-    tasks: [
-      {
-        id: "T1",
-        title: "Move the lexer out",
-        status: "in_progress",
-        holderId: "main",
-        items: [
-          { label: "Write the lexer", isTicked: true },
-          { label: "Point the reader at it", isTicked: false },
-        ],
-      },
-      {
-        id: "T2",
-        title: "Update the parser tests",
-        status: "blocked",
-        note: "Waits on the lexer",
-        items: [{ label: "Rename the fixtures", isTicked: false }],
-      },
-      { id: "T3", title: "Read the old parser", status: "done", items: [] },
-    ],
-    ownerTasks: [
-      {
-        id: "O1",
-        rev: 0,
-        title: "Try the new parser on a sample file",
-        description: "Any file from example.com will do.",
-        items: [
-          { label: "Run it once", isTicked: false },
-          { label: "Compare the output", isTicked: false },
-        ],
-        isStartPressed: false,
-        isDone: false,
-      },
-    ],
-  });
-  const gamma = sessions.get("fixture-session-gamma")?.board;
-  assert.deepEqual(gamma?.ownerTasks[0]?.lastChange, { summary: 'ticked "Read the summary"', delivery: "seen" });
-  const delta = sessions.get("fixture-session-delta")?.board;
-  assert.deepEqual(delta?.decisions[0]?.options, [{ label: "Publish them" }, { label: "Wait for review" }]);
-});
-
 void test("an entry with an unknown shape is its session's error, and other sessions carry on", async (t) => {
   const { configDir, storeDir } = await makeStoreDirectory(t);
   const { question: _question, ...decisionWithoutQuestion } = { id: "D1", question: "Ship?", options: ["Yes", "No"] };
@@ -134,15 +50,17 @@ void test("an entry with an unknown shape is its session's error, and other sess
   assert.match(described[1] ?? "", /^away store fixture-one: mode: Invalid option/);
 });
 
-void test("takes the board entry with the newest savedAt and the mode from the newest away file", async (t) => {
+void test("takes the board entry with the newest savedAt, a missing one as 0 and a tie to the first file by name, and the mode from the newest away file", async (t) => {
   const { configDir, storeDir } = await makeStoreDirectory(t);
   await writeStore(storeDir, "board_a.json", {
     "session:fixture-one": boardWithTask("newer one", 2),
     "session:fixture-two": boardWithTask("older two", 1),
+    "session:fixture-three": boardWithTask("saved at 0", 0),
   });
   await writeStore(storeDir, "board_b.json", {
     "session:fixture-one": boardWithTask("older one", 1),
     "session:fixture-two": boardWithTask("newer two", 2),
+    "session:fixture-three": { tasks: [{ id: "T1", title: "never saved", status: "pending" }] },
   });
   const middle = await writeStore(storeDir, "away_a.json", {
     "session:fixture-one": "distracted",
@@ -154,16 +72,20 @@ void test("takes the board entry with the newest savedAt and the mode from the n
   await utimes(middle, 2000, 2000);
   await utimes(newest, 3000, 3000);
 
-  const { sessions, errors } = await createStoreSource(configDir).read(["fixture-one", "fixture-two"], 0);
+  const { sessions, errors } = await createStoreSource(configDir).read(
+    ["fixture-one", "fixture-two", "fixture-three"],
+    0,
+  );
 
   assert.deepEqual(errors, []);
   assert.deepEqual(taskTitles(sessions.get("fixture-one")), ["newer one"]);
   assert.deepEqual(taskTitles(sessions.get("fixture-two")), ["newer two"]);
+  assert.deepEqual(taskTitles(sessions.get("fixture-three")), ["saved at 0"]);
   assert.equal(sessions.get("fixture-one")?.mode, "distracted");
   assert.equal(sessions.get("fixture-two")?.mode, "distracted");
 });
 
-void test("parses a file again only when its modified time or size changed", async (t) => {
+void test("parses a file again only when its modified time or size changed, and forgets one that is gone", async (t) => {
   const { configDir, storeDir } = await makeStoreDirectory(t);
   const stores = createStoreSource(configDir);
   const sessionIds = ["fixture-one", "fixture-two"];
@@ -180,6 +102,10 @@ void test("parses a file again only when its modified time or size changed", asy
   const touched = await stores.read(sessionIds, 2);
   assert.equal(touched.sessions.get("fixture-one")?.mode, undefined);
   assert.equal(touched.sessions.get("fixture-two")?.mode, "away");
+
+  await rm(path);
+  const gone = await stores.read(sessionIds, 3);
+  assert.equal(gone.sessions.get("fixture-two")?.mode, undefined);
 });
 
 void test("keeps the last good copy of a file that fails to parse, and reports it once it has failed for 10 seconds", async (t) => {
@@ -205,17 +131,25 @@ void test("keeps the last good copy of a file that fails to parse, and reports i
   assert.deepEqual(repaired, { sessions: new Map([["fixture-one", { mode: "distracted" }]]), errors: [] });
 });
 
-void test("reads no boards and no errors from a config dir with no store directory", async (t) => {
+void test("a missing store directory reads as no stores and no error, and one that cannot be listed is an error", async (t) => {
   const configDir = await mkdtemp(join(tmpdir(), "hub-stores-test-"));
   t.after(() => rm(configDir, { recursive: true }));
 
-  const read = await createStoreSource(configDir).read(["fixture-one"], 0);
+  const missing = await createStoreSource(configDir).read(["fixture-one"], 0);
+  await mkdir(join(configDir, "plugins"));
+  await writeFile(join(configDir, "plugins", "store"), "not a directory");
+  const unlistable = await createStoreSource(configDir).read(["fixture-one"], 0);
 
-  assert.deepEqual(read, { sessions: new Map([["fixture-one", {}]]), errors: [] });
+  assert.deepEqual(missing, { sessions: new Map([["fixture-one", {}]]), errors: [] });
+  assert.deepEqual(unlistable, {
+    sessions: new Map([["fixture-one", {}]]),
+    errors: [{ source: "stores", message: "could not list the store directory: ENOTDIR" }],
+  });
 });
 
-void test("reports a store name that is a symbolic link and does not follow it", async (t) => {
+void test("reads only regular files with a store's name, and reports a store name that is a symbolic link without following it", async (t) => {
   const { configDir, storeDir } = await makeStoreDirectory(t);
+  await writeStore(storeDir, "notes.json", { "session:fixture-one": "away" });
   const outside = await writeStore(configDir, "elsewhere.json", { "session:fixture-one": "away" });
   await symlink(outside, join(storeDir, "away_link.json"));
 

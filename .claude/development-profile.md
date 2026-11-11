@@ -95,7 +95,8 @@ a knowledge base note already answers a question, this file points there.
   reach the real `~/.claude` or live sessions, with no test-only path in the hub's code.
 - Evidence: the steps, what each showed, and screenshots attached with
   `gh pr comment <n> --body-file <file> --attach '<image>#<alt text>'` (gh 2.99 or newer). No scan reads an image, so
-  every image is looked at before it is posted.
+  every image is looked at before it is posted. The attachment upload refuses the bot's App token, so the lead
+  prepares the body file and images and the owner runs that command as a board task.
 - What it cannot show: behaviour with real sessions and the real `hub`, `board` and `away` plugins, which the owner
   tries before merging.
 

@@ -1,27 +1,168 @@
-import type { Snapshot, SourceError } from "../../shared/api.ts";
+import type {
+  DecisionView,
+  Delivery,
+  Item,
+  Mode,
+  OwnerTaskView,
+  SessionView,
+  Snapshot,
+  SourceError,
+  TaskView,
+} from "../../shared/api.ts";
 
-type JsonObject = Record<string, unknown>;
+/** Narrows `value` or throws naming `where`, the path to the value, such as `snapshot field sessions entry 0`. */
+type Narrow<T> = (value: unknown, where: string) => T;
 
-function isJsonObject(value: unknown): value is JsonObject {
+type Fields = {
+  required<T>(field: string, narrow: Narrow<T>): T;
+  /** Absent reads as `{}`, so the result spreads into the object being built. */
+  optional<K extends string, T>(field: K, narrow: Narrow<T>): Partial<Record<K, T>>;
+};
+
+function isJsonObject(value: unknown): value is Record<string, unknown> {
   if (typeof value !== "object" || value === null) return false;
   return !Array.isArray(value);
 }
 
-function readString(record: JsonObject, field: string, where: string): string {
-  const value = record[field];
-  if (typeof value !== "string") throw new Error(`${where} field ${field} is not a string`);
+const string: Narrow<string> = (value, where) => {
+  if (typeof value !== "string") throw new Error(`${where} is not a string`);
   return value;
+};
+
+const number: Narrow<number> = (value, where) => {
+  if (typeof value !== "number") throw new Error(`${where} is not a number`);
+  return value;
+};
+
+const boolean: Narrow<boolean> = (value, where) => {
+  if (typeof value !== "boolean") throw new Error(`${where} is not a boolean`);
+  return value;
+};
+
+function oneOf<T extends string>(values: readonly T[]): Narrow<T> {
+  return (value, where) => {
+    const found = values.find((candidate) => candidate === value);
+    if (found === undefined) throw new Error(`${where} is not one of ${values.join(", ")}`);
+    return found;
+  };
 }
 
-function readSourceError(value: unknown): SourceError {
-  if (!isJsonObject(value)) throw new Error("snapshot errors entry is not an object");
-  const error: SourceError = {
-    source: readString(value, "source", "snapshot errors entry"),
-    message: readString(value, "message", "snapshot errors entry"),
+function listOf<T>(narrowEntry: Narrow<T>): Narrow<T[]> {
+  return (value, where) => {
+    if (!Array.isArray(value)) throw new Error(`${where} is not a list`);
+    return value.map((entry: unknown, index) => narrowEntry(entry, `${where} entry ${index}`));
   };
-  if (value["sessionId"] === undefined) return error;
-  return { ...error, sessionId: readString(value, "sessionId", "snapshot errors entry") };
 }
+
+/** Builds only the fields `build` names, so a field the hub adds later never reaches the page unread. */
+function objectOf<T>(build: (fields: Fields) => T): Narrow<T> {
+  return (value, where) => {
+    if (!isJsonObject(value)) throw new Error(`${where} is not an object`);
+    const fields: Fields = {
+      required: (field, narrow) => narrow(value[field], `${where} field ${field}`),
+      optional: <Key extends string, Value>(field: Key, narrow: Narrow<Value>) => {
+        const read: Partial<Record<Key, Value>> = {};
+        const fieldValue = value[field];
+        if (fieldValue === undefined) return read;
+        read[field] = narrow(fieldValue, `${where} field ${field}`);
+        return read;
+      },
+    };
+    return build(fields);
+  };
+}
+
+const delivery = oneOf<Delivery>(["sending", "sent", "seen", "failed"]);
+const mode = oneOf<Mode>(["present", "distracted", "away"]);
+
+const item = objectOf<Item>((fields) => ({
+  label: fields.required("label", string),
+  isTicked: fields.required("isTicked", boolean),
+}));
+
+const option = objectOf<DecisionView["options"][number]>((fields) => ({
+  label: fields.required("label", string),
+  ...fields.optional("description", string),
+}));
+
+const decision = objectOf<DecisionView>((fields) => ({
+  id: fields.required("id", string),
+  rev: fields.required("rev", number),
+  ...fields.optional("createdAt", number),
+  question: fields.required("question", string),
+  ...fields.optional("context", string),
+  options: fields.required("options", listOf(option)),
+  ...fields.optional("recommended", number),
+  ...fields.optional("askedBy", string),
+  ...fields.optional("plugin", string),
+  isAnswerKept: fields.required("isAnswerKept", boolean),
+  ...fields.optional("answer", string),
+  ...fields.optional("chosenOption", string),
+  ...fields.optional("note", string),
+  ...fields.optional("delivery", delivery),
+}));
+
+const lastChange = objectOf<NonNullable<OwnerTaskView["lastChange"]>>((fields) => ({
+  summary: fields.required("summary", string),
+  delivery: fields.required("delivery", delivery),
+}));
+
+const ownerTask = objectOf<OwnerTaskView>((fields) => ({
+  id: fields.required("id", string),
+  rev: fields.required("rev", number),
+  ...fields.optional("createdAt", number),
+  title: fields.required("title", string),
+  ...fields.optional("description", string),
+  ...fields.optional("postedBy", string),
+  items: fields.required("items", listOf(item)),
+  isStartPressed: fields.required("isStartPressed", boolean),
+  isDone: fields.required("isDone", boolean),
+  ...fields.optional("lastChange", lastChange),
+}));
+
+const task = objectOf<TaskView>((fields) => ({
+  id: fields.required("id", string),
+  title: fields.required("title", string),
+  status: fields.required("status", string),
+  ...fields.optional("note", string),
+  ...fields.optional("holderId", string),
+  items: fields.required("items", listOf(item)),
+}));
+
+const session = objectOf<SessionView>((fields) => ({
+  key: fields.required("key", string),
+  ...fields.optional("sessionId", string),
+  ...fields.optional("shortId", string),
+  ...fields.optional("name", string),
+  cwd: fields.required("cwd", string),
+  kind: fields.required("kind", string),
+  startedAt: fields.required("startedAt", number),
+  isProcessAlive: fields.required("isProcessAlive", boolean),
+  ...fields.optional("status", string),
+  ...fields.optional("state", string),
+  ...fields.optional("waitingFor", string),
+  ...fields.optional("mode", mode),
+  decisions: fields.required("decisions", listOf(decision)),
+  ownerTasks: fields.required("ownerTasks", listOf(ownerTask)),
+  tasks: fields.required("tasks", listOf(task)),
+  needsYou: fields.required("needsYou", boolean),
+  hasUnreadAnswers: fields.required("hasUnreadAnswers", boolean),
+  canAnswer: fields.required("canAnswer", boolean),
+  canSetMode: fields.required("canSetMode", boolean),
+}));
+
+const sourceError = objectOf<SourceError>((fields) => ({
+  source: fields.required("source", string),
+  ...fields.optional("sessionId", string),
+  message: fields.required("message", string),
+}));
+
+const snapshot = objectOf<Snapshot>((fields) => ({
+  runId: fields.required("runId", string),
+  now: fields.required("now", number),
+  sessions: fields.required("sessions", listOf(session)),
+  errors: fields.required("errors", listOf(sourceError)),
+}));
 
 export type RunSnapshot = { kind: "restarted" } | { kind: "snapshot"; snapshot: Snapshot };
 
@@ -31,20 +172,12 @@ export type RunSnapshot = { kind: "restarted" } | { kind: "snapshot"; snapshot: 
  */
 export function readRunSnapshot(body: unknown, knownRunId: string | undefined): RunSnapshot {
   if (!isJsonObject(body)) throw new Error("snapshot is not an object");
-  const runId = readString(body, "runId", "snapshot");
+  const runId = string(body["runId"], "snapshot field runId");
   if (knownRunId !== undefined && runId !== knownRunId) return { kind: "restarted" };
   return { kind: "snapshot", snapshot: readSnapshot(body) };
 }
 
-/** Narrows a `GET /api/snapshot` body to `Snapshot`, throwing with the name of the first field that does not fit. */
+/** Narrows a `GET /api/snapshot` body to `Snapshot`, throwing with the path of the first field that does not fit. */
 export function readSnapshot(body: unknown): Snapshot {
-  if (!isJsonObject(body)) throw new Error("snapshot is not an object");
-  const now = body["now"];
-  if (typeof now !== "number") throw new Error("snapshot field now is not a number");
-  const sessions = body["sessions"];
-  if (!Array.isArray(sessions)) throw new Error("snapshot field sessions is not a list");
-  const errors = body["errors"];
-  if (!Array.isArray(errors)) throw new Error("snapshot field errors is not a list");
-  // The page shows no session yet, so sessions are left unread rather than narrowed.
-  return { runId: readString(body, "runId", "snapshot"), now, sessions: [], errors: errors.map(readSourceError) };
+  return snapshot(body, "snapshot");
 }

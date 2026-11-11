@@ -1,13 +1,13 @@
 import { render } from "preact";
 import { useEffect, useErrorBoundary, useReducer } from "preact/hooks";
-import { connectionReducer, initialConnectionState } from "../logic/connection.ts";
+import { initialPageState, pageReducer } from "../logic/page-state.ts";
 import { startClient } from "./client.ts";
 import { Page } from "./page.tsx";
 
 function App() {
-  const [state, dispatch] = useReducer(connectionReducer, initialConnectionState);
+  const [state, dispatch] = useReducer(pageReducer, initialPageState);
   useEffect(() => startClient(dispatch), []);
-  return <Page state={state} />;
+  return <Page state={state} dispatch={dispatch} />;
 }
 
 // A caught render error reaches no window event, so the boundary logs it itself.

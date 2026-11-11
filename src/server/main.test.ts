@@ -276,7 +276,7 @@ void test("each snapshot request reads the session list and the stores under the
       title: "Check the report reads well",
       items: [{ label: "Read the summary", isTicked: true }],
       isStartPressed: true,
-      isDone: false,
+      isDone: true,
       lastChange: { summary: 'ticked "Read the summary"', delivery: "seen" },
     },
   ]);

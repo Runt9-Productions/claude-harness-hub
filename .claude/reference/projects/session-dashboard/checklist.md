@@ -9,8 +9,8 @@ tags: ["dashboard"]
 
 ## Status
 
-- **Live item:** 04 Dashboard view
-- **How far along:** 01 to 03 committed; 04 in progress
+- **Live item:** 05 Docs
+- **How far along:** 01 to 04 committed; 05 in progress
 - **Blocked on:** nothing
 - **Last moved:** 2026-11-11
 
@@ -27,6 +27,6 @@ Each source stands alone, the snapshot needs both, the view needs the snapshot, 
 - [x] 02 Store source: `src/server/sources/stores.ts`, the board and away schemas, fixture stores, and tests
 - [x] 03 Snapshot: the shared view types, `src/server/hub/` building `SessionView`s, `start(config)` taking the config
   dir and running the sources on each snapshot request, and tests through `start`
-- [ ] 04 Dashboard view: the browser's snapshot reader, grouping and columns in `src/web/logic`, the top bar and
+- [x] 04 Dashboard view: the browser's snapshot reader, grouping and columns in `src/web/logic`, the top bar and
   cards in `src/web/ui`, the palette and card CSS, and the style guide note
 - [ ] 05 Docs: the hub notes gain the new sources and close the questions this slice answers

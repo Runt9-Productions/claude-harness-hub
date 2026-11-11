@@ -47,24 +47,24 @@ Read this before touching `src/server/sources/`, the snapshot builder in `src/se
 - [invariant] `execFile('claude', ['agents', '--json', '--all'])` with a 5 second timeout, `killSignal: 'SIGKILL'`,
   a 64 MiB output limit, the home directory as its working directory, and one call in flight. A child that ignores
   the default signal otherwise holds the callback past the timeout, and output past Node's default 1 MiB limit fails
-  the whole call (`runList`, `src/server/sources/agents.ts:130`)
+  the whole call (`runList`, `src/server/sources/agents.ts:129`)
 - [invariant] A call starts at most every 3 seconds of `now`, and a request waits for it only while no list has been
   read yet; otherwise it answers with the last list at once and the refresh shows on a later request. A failed call
   keeps the last list and its row errors, plus one call error that the next good call clears (`read`,
-  `src/server/sources/agents.ts:189`)
+  `src/server/sources/agents.ts:188`)
 - [fact] A `now` earlier than the last start counts as due, so a clock set back cannot freeze the list (`isDue`,
-  `src/server/sources/agents.ts:162`)
+  `src/server/sources/agents.ts:161`)
 - [invariant] Every relative `PATH` entry, and every entry ending in `/node_modules/.bin` with or without trailing
   slashes, is removed from the child's `PATH`. npm adds one per ancestor directory, so a package's `bin` could
   otherwise supply `claude`, and a relative entry would resolve against the fixed working directory (`childPath`,
-  `src/server/sources/agents.ts:112`)
+  `src/server/sources/agents.ts:111`)
 - [invariant] A call error is built from the exit code, error code or signal only, never from `execFile`'s own
   message, which embeds stderr. A child ended by a signal has a `code` of null, so only a string `code` is named as
-  one (`callFailureMessage`, `src/server/sources/agents.ts:120`)
+  one (`callFailureMessage`, `src/server/sources/agents.ts:119`)
 - [fact] Each row is parsed on its own and needs only `cwd`, `kind` and `startedAt`. A row that fails is dropped with
   an error whose `sessionId` is the row's string `sessionId`, else its string `id`, and whose message is
   `<field path>: <message>`; a row with neither gets no `sessionId` and the message `row <n>: <field path>:
-  <message>` (`droppedRowError`, `src/server/sources/agents.ts:72`). The other rows carry on, and fields the schema
+  <message>` (`droppedRowError`, `src/server/sources/agents.ts:71`). The other rows carry on, and fields the schema
   does not name are stripped (`rowSchema`, `src/server/sources/agents.ts:25`)
 - [invariant] An unknown `kind`, `status`, `state` or `waitingFor` value keeps its raw text and adds
   `unknown <field> value` with the row's key as `sessionId`, and the rest of that session still builds, because the

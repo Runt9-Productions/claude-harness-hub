@@ -62,7 +62,6 @@ function unknownValueErrors(row: SessionRow): SourceError[] {
   return errors;
 }
 
-// A string `sessionId` wins; failing that, a string `id`.
 const rawKeySchema = z.union([
   z.object({ sessionId: z.string() }).transform((row) => row.sessionId),
   z.object({ id: z.string() }).transform((row) => row.id),

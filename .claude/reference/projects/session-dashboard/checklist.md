@@ -10,7 +10,7 @@ tags: ["dashboard"]
 ## Status
 
 - **Live item:** none; every item is committed
-- **How far along:** 01 to 05 committed, verified in a browser, in review
+- **How far along:** 01 to 05 built and verified in a browser
 - **Blocked on:** nothing
 - **Last moved:** 2026-11-11
 

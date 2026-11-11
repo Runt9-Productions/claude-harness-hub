@@ -23,3 +23,18 @@ adds two outside sources and a bigger view, and no new route.
 
 - Risk: the browser reader for the full `SessionView` is hand-written, since no validator reaches the browser
 - Not verified: the real store's shape is taken from the design's field list, not from a store file
+
+## Actual
+
+Against `main` when #26 was finished: production `src` came to 15 files, +1,828 / -86, and tests and fixtures to 12
+files, +1,200 / -22. The whole diff was 44 files, +3,694 / -219, and the notes alone were +639 / -98.
+
+| Piece | Production | Estimate |
+|---|---|---|
+| Sources (`src/server/sources/`) | +469 | 300 to 430 |
+| Snapshot, shared types, `main.ts`, the browser handler | +355 / -12 | 150 to 220 |
+| Dashboard (`src/web/`) | +996 / -67 | 400 to 550 |
+
+The estimate missed most in three places. The CSS took +386 lines on its own. The tests doubled, because the test
+review and the code review added tests for 18 rules that no test covered. The notes came to over 600 lines, against
+the 20 to 40 estimated for the docs.

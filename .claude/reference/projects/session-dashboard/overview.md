@@ -3,7 +3,7 @@ title: Session Dashboard
 type: note
 permalink: projects/session-dashboard/overview
 tags: ["dashboard", "sources", "snapshot", "claude-agents", "board-store", "away-store"]
-status: implementation
+status: complete
 opened: "2026-11-11"
 ---
 
@@ -15,7 +15,8 @@ first. It ends when that pull request merges.
 
 ## Where it stands
 
-- [status] Built, verified in a browser and in review on #26
+- [status] Built: the session list and store sources, the snapshot with `needsYou` and `waitingCount`, and the
+  dashboard with held columns. Its durable facts are in the hub notes under `domains/hub/`
 
 ## Documents
 

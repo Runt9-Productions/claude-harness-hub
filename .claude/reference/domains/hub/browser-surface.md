@@ -21,7 +21,7 @@ measured_on: "Chrome 157, Node 26.13.0, on Linux under WSL2"
 > **Scope.** How the hub starts, how a browser proves it may read and act, the checks and headers on every request,
 > the HTTP API with its `Snapshot` type, and how the page polls, as agreed with the owner on 2026-11-08 and 2026-11-09
 > before any hub code existed. On #24 the launch, token, `GET` check, header, CSP and polling lines were checked
-> against the sources listed. On #PRNUM the 500 path, the `Snapshot` and `SessionView` types, the page's snapshot
+> against the sources listed. On #26 the 500 path, the `Snapshot` and `SessionView` types, the page's snapshot
 > reader and the line numbers cited were checked again; the other lines checked on #24 were carried forward without a
 > re-read. The `POST` checks, `POST /api/commands`, the `commands`, `usage`, `activity`, `contextPercent` and
 > `sandboxProblem` fields and the `202` reschedule are design the code does not hold yet, carried forward unchecked.

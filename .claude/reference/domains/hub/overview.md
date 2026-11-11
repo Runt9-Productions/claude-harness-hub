@@ -22,7 +22,7 @@ measured_on: "Node 26.13.0, TypeScript 7.0.2, zod 4.6.7, oxlint 1.90.0 (versions
 > **Scope.** The hub's shape, its modules and the rules between them, as agreed with the owner on 2026-11-08 and
 > 2026-11-09, before any hub code existed; `tsconfig.json` and the `tests` job of `.github/workflows/ci.yml` were read
 > for the lines that cite them. On #24 the import rule and TypeScript project lines were checked against the three
-> `tsconfig.json` files and `.oxlintrc.json`. On #PRNUM the no-default line, the structural input types and the
+> `tsconfig.json` files and `.oxlintrc.json`. On #26 the no-default line, the structural input types and the
 > schema lines were checked against the snapshot builder, the store source and `main.ts`, and `tsc -p tsconfig.json`
 > was run; the #24 lines and the rest were carried forward without a re-check. The two 2026-11-08 measured lines were
 > not re-run for this note. Not covered: the other areas, which have their own notes linked below, and the `hub`

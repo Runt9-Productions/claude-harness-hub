@@ -20,7 +20,7 @@ measured_on: "Claude Code 2.1.319, on Linux"
 
 > **Scope.** How `src/server/sources` reads the session list and the `board` and `away` stores, how
 > `src/server/hub/snapshot.ts` builds the snapshot from them, and which store fields the hub depends on. The design
-> was agreed with the owner on 2026-11-08 and 2026-11-09; on #PRNUM the session list, store and snapshot lines were
+> was agreed with the owner on 2026-11-08 and 2026-11-09; on #26 the session list, store and snapshot lines were
 > checked against the sources listed, and the store field lines against the `board` and `away` plugins' code in
 > runt9-claude-harness at `283ad99`, read only. That code is not in `sources`, so a harness change does not mark this
 > note stale. Carried forward unchecked, since no code holds them yet: the `hub` plugin's report (its mode and

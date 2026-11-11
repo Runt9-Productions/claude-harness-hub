@@ -15,7 +15,7 @@ sources:
 # Hub Style Guide
 
 > **Scope.** The page's colour tokens, the top bar, the dashboard card's parts and the layout rules later views
-> reuse, read from the dashboard's CSS, views and layout logic on #PRNUM. The palette and the card's look follow
+> reuse, read from the dashboard's CSS, views and layout logic on #26. The palette and the card's look follow
 > the owner's mockup, which is not in this repository. Not covered: how any of it renders in a browser (no line here
 > was measured), the waiting list and session views, which are not built, and the CSS rules [[Hub Browser Code]]
 > holds.

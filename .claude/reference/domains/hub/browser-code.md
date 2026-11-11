@@ -24,7 +24,7 @@ measured_on: "Preact 11.2.0 and 11.1.1, Chrome 157, Node 26.13.0, oxlint 1.90.0,
 
 > **Scope.** How the page is built and served, and the rules for its state, layout stability, error handling and
 > CSS, as agreed with the owner on 2026-11-08 and 2026-11-09 before any hub code existed. On #24 the build, serving,
-> root error handling, CSS file and lint lines were checked against the sources listed, and on #PRNUM the error
+> root error handling, CSS file and lint lines were checked against the sources listed, and on #26 the error
 > boundary, UI state, dashboard order and list stability lines were checked against the dashboard; the #24 lines were
 > carried forward without a re-read. Commands, routes other than `#/`, the rest of the UI state and list stability
 > outside the dashboard are design the code does not hold yet, carried forward unchecked. The Preact 11.2.0 lines

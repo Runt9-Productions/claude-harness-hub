@@ -61,7 +61,7 @@ simplification can go back to the owner.
 
 - [invariant] `src/shared` is one runtime file, not a types-only one: the `tests` job fails any server or shared
   source no test loads, and a types-only file is erased at run time so no test can load it
-  (step "node:test with coverage", `.github/workflows/ci.yml:196`)
+  (step "node:test with coverage", `.github/workflows/ci.yml:199`)
 - [invariant] `src/shared` holds no validator, so none reaches the browser bundle
 - [invariant] Import rules are enforced by oxlint `no-restricted-imports` in per-directory overrides, and
   `no-restricted-globals` bars `document` and `window` in `src/web/logic`. Test files are left out of every override

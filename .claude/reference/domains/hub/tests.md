@@ -33,10 +33,9 @@ Read this before writing or moving a test, the fixture script or `src/e2e/fixtur
 - [invariant] A test loads `main.ts` and calls `start(config)` with a temporary config dir and asset root, so
   `node --test` needs no browser build. So far `HubConfig` has no config dir, and the asset root holds stand-in files
   (`makeAssetRoot`, `src/server/main.test.ts:28`)
-- [fact] The `tests` job runs `git ls-files` over `src/**/*.test.ts` and measures coverage over `src/server/**/*.ts`
-  and `src/shared/**/*.ts` only (`.github/workflows/ci.yml:198`, `.github/workflows/ci.yml:204`)
-- [trap] So `src/web/logic` has no coverage threshold until both coverage globs gain `src/web/logic/**/*.ts`; that is
-  an owner's change to `.github/workflows/ci.yml` #silent-failure
+- [fact] The `tests` job runs `git ls-files` over `src/**/*.test.ts` and measures coverage over `src/server/**/*.ts`,
+  `src/shared/**/*.ts` and `src/web/logic/**/*.ts`, and fails any of those sources no test loads
+  (`.github/workflows/ci.yml:201`, `.github/workflows/ci.yml:207`, `.github/workflows/ci.yml:213`)
 
 ### Browser tests
 

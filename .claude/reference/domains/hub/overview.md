@@ -24,9 +24,11 @@ measured_on: "Node 26.13.0, TypeScript 7.0.2, zod 4.6.7, oxlint 1.90.0 (versions
 > for the lines that cite them. On #24 the import rule and TypeScript project lines were checked against the three
 > `tsconfig.json` files and `.oxlintrc.json`. On #26 the no-default line, the structural input types and the
 > schema lines were checked against the snapshot builder, the store source and `main.ts`, and `tsc -p tsconfig.json`
-> was run; the #24 lines and the rest were carried forward without a re-check. The two 2026-11-08 measured lines were
-> not re-run for this note. Not covered: the other areas, which have their own notes linked below, and the `hub`
-> plugin's own code, which lives in runt9-claude-harness.
+> was run. On #7 the no-default line and the structural input types line were checked again against the snapshot
+> builder, whose stored item types are now the view types without `isWaiting`; the #24 lines and the rest were
+> carried forward without a re-check. The two 2026-11-08 measured lines were not re-run for this note. Not covered:
+> the other areas, which have their own notes linked below, and the `hub` plugin's own code, which lives in
+> runt9-claude-harness.
 
 Read this before creating or moving a file under `src/`, adding an import between modules, or adding a schema. Lines
 other than `[decision]` lines are the agent-written design the owner agreed as a whole, so a rule that blocks a

@@ -12,7 +12,9 @@ sources:
   - "src/server/hub/snapshot.ts"
   - "src/server/main.ts"
   - "src/web/logic/dashboard.ts"
+  - "src/web/logic/waiting.ts"
   - "src/web/ui/dashboard.tsx"
+  - "src/web/ui/page.tsx"
 measured_on: "Claude Code 2.1.319, on Linux"
 ---
 
@@ -23,11 +25,13 @@ measured_on: "Claude Code 2.1.319, on Linux"
 > was agreed with the owner on 2026-11-08 and 2026-11-09; on #26 the session list, store and snapshot lines were
 > checked against the sources listed, and the store field lines against the `board` and `away` plugins' code in
 > runt9-claude-harness at `283ad99`, read only. That code is not in `sources`, so a harness change does not mark this
-> note stale. Carried forward unchecked, since no code holds them yet: the `hub` plugin's report (its mode and
-> `permissionTool`), the Wake button, the waiting items' order and plan usage. The store measurements were taken on
+> note stale. On #7 the needs-you and waiting line, the stopped line, the error placement line and the waiting items'
+> order were checked against the snapshot builder, the waiting list logic and the page; the other #26 lines were
+> carried forward without a re-read. Carried forward unchecked, since no code holds them yet: the `hub` plugin's
+> report (its mode and `permissionTool`), the Wake button and plan usage. The store measurements were taken on
 > 2026-11-08 and were not re-run, and no real store file was opened. Not covered: the session list's own fields
-> ([[Claude Agents JSON List]]), live reports from the `hub` plugin ([[Hub Plugin Socket]]), and how a card looks
-> ([[Hub Style Guide]]).
+> ([[Claude Agents JSON List]]), live reports from the `hub` plugin ([[Hub Plugin Socket]]), and how a card or a row
+> looks ([[Hub Style Guide]]).
 
 Read this before touching `src/server/sources/`, the snapshot builder in `src/server/hub/`, or a store schema.
 
@@ -83,15 +87,16 @@ Read this before touching `src/server/sources/`, the snapshot builder in `src/se
 - [trap] A board entry that fails validation counts as no owner work as well, so a stopped session whose entry fails
   is hidden, and its store error, with no card to go on, shows under the top bar (`placeErrors`,
   `src/web/logic/dashboard.ts:63`)
-- [invariant] A row with no `pid` is read-only. Its card says "process stopped: `claude attach <id>` wakes it" with
-  the short `id`, or only "process stopped" when it has none (`Card`, `src/web/ui/dashboard.tsx:110`); once awake its
-  `hub` plugin reconnects. A Wake button (`claude respawn <id>`) waits for real use to ask for it
+- [invariant] A row with no `pid` is read-only. Its card, and its open row in the waiting list, say "process stopped:
+  `claude attach <id>` wakes it" with the short `id`, or only "process stopped" when it has none (`StoppedLine`,
+  `src/web/ui/dashboard.tsx:58`); once awake its `hub` plugin reconnects. A Wake button (`claude respawn <id>`) waits
+  for real use to ask for it
 - [invariant] A session needs the owner when it has an unanswered decision, an unfinished owner task,
   `status: waiting` or `state: blocked`. The hub sets this as `needsYou` on each `SessionView` (`needsYou`,
-  `src/server/hub/snapshot.ts:81`), and sends the card's count of unanswered decisions plus unfinished owner tasks as
-  `waitingCount`, from the same two predicates, so the browser holds no copy of the rule (`waitingCount`,
-  `src/server/hub/snapshot.ts:63`). `waitingFor` says what holds it, and the report's `permissionTool` will name the
-  tool when there is one
+  `src/server/hub/snapshot.ts:81`), marks each unanswered decision and unfinished owner task `isWaiting`, and sends
+  the count of those as `waitingCount`, all from the same two predicates, so the browser holds no copy of the rule
+  (`isUnanswered` and `isUnfinished`, `src/server/hub/snapshot.ts:55`). `waitingFor` says what holds it, and the
+  report's `permissionTool` will name the tool when there is one
 
 ### Stores
 
@@ -175,10 +180,15 @@ Renaming or removing one is a change to this contract. The hub's schemas are in 
   absent, because the session is either present or has no `away` plugin and the hub cannot tell. The view draws an
   absent mode as present (`StateLine`, `src/web/ui/dashboard.tsx:42`)
 - [fact] `errors` holds the list's, then the stores', then the builder's own, and is not filtered to the sessions
-  shown. The browser puts an error on the card whose `key` equals its `sessionId`, and any other under the top bar
+  shown. On the dashboard the browser puts an error on the card whose `key` equals its `sessionId`, and any other
+  under the top bar; on the waiting list, which has no cards, every error shows under the top bar (`SnapshotView`,
+  `src/web/ui/page.tsx:116`)
 - [trap] `buildSnapshot` throws when the store read has no entry for a listed `sessionId`, which the store source
   always returns, so that request answers 500 (`storedSession`, `src/server/hub/snapshot.ts:184`)
-- [invariant] Waiting items sort by `createdAt`; an item without one sorts by its session's start, then its number
+- [fact] The waiting items are ordered in the browser, not by the hub: each of the two lists, across every session,
+  sorts by `createdAt`, else the session's `startedAt`. On equal times an item with `createdAt` goes first, then the
+  lower number in the id (its first run of digits, with an id holding none last), then the id's text (`oldestFirst`,
+  `src/web/logic/waiting.ts:43`)
 - [invariant] Plan usage: each session reports the windows from its last model response, so a reading can outlive
   its window. Per `kind`, drop readings whose `resetsAt` has passed, then take the latest `resetsAt`, then the highest
   `percentUsed`. A reading with no `resetsAt` sorts last; with nothing left, that kind shows no reading
@@ -198,5 +208,6 @@ Renaming or removing one is a change to this contract. The hub's schemas are in 
 
 - part_of [[Hub Architecture]]
 - depends_on [[Claude Agents JSON List]]
+- see_also [[Hub Browser Code]]
 - see_also [[Hub Plugin Socket]]
 - see_also [[Hub Commands]]

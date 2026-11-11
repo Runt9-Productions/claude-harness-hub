@@ -12,6 +12,8 @@ import {
   type Columns,
 } from "../logic/dashboard.ts";
 import type { PageDispatch } from "../logic/page-state.ts";
+import { sessionName } from "../logic/session.ts";
+import { StoppedLine } from "./session.tsx";
 
 function useViewportWidth(): number {
   const [width, setWidth] = useState(window.innerWidth);
@@ -112,21 +114,12 @@ function Card({ session, errors, isExpanded, dispatch }: CardProps) {
     <article class="card" data-needs-you={session.needsYou}>
       <header class="card-head">
         <span class="dot" data-tone={sessionTone(session)} aria-hidden="true" />
-        <h3 class="card-name">{session.name ?? session.shortId ?? session.key}</h3>
+        <h3 class="card-name">{sessionName(session)}</h3>
         {session.waitingCount > 0 && <span class="waiting-count">{session.waitingCount} waiting</span>}
       </header>
       <StateLine session={session} />
       <p class="card-dir">{session.cwd}</p>
-      {!session.isProcessAlive && (
-        <p class="card-stopped">
-          process stopped
-          {session.shortId !== undefined && (
-            <>
-              : <code>claude attach {session.shortId}</code> wakes it
-            </>
-          )}
-        </p>
-      )}
+      <StoppedLine session={session} />
       {errors.map((error, index) => (
         <p key={index} class="card-error">
           {error.source}: {error.message}

@@ -205,6 +205,7 @@ void test("each snapshot request reads the session list and the stores under the
       {
         id: "D1",
         rev: 0,
+        createdAt: 1794300420000,
         question: "Split the parser into a lexer and a reader?",
         context: "Splitting costs one more file; keeping it costs a longer function.",
         options: [
@@ -213,6 +214,7 @@ void test("each snapshot request reads the session list and the stores under the
         ],
         recommended: 0,
         isAnswerKept: false,
+        isWaiting: true,
       },
       {
         id: "D2",
@@ -221,6 +223,7 @@ void test("each snapshot request reads the session list and the stores under the
         options: [{ label: "Keep them" }, { label: "Reword them" }],
         recommended: 1,
         isAnswerKept: false,
+        isWaiting: false,
         answer: "Reword them. Note: shorter ones",
         chosenOption: "Reword them",
         note: "shorter ones",
@@ -231,6 +234,7 @@ void test("each snapshot request reads the session list and the stores under the
       {
         id: "O1",
         rev: 0,
+        createdAt: 1794300480000,
         title: "Try the new parser on a sample file",
         description: "Any file from example.com will do.",
         items: [
@@ -239,6 +243,7 @@ void test("each snapshot request reads the session list and the stores under the
         ],
         isStartPressed: false,
         isDone: false,
+        isWaiting: true,
       },
     ],
     tasks: [
@@ -278,6 +283,7 @@ void test("each snapshot request reads the session list and the stores under the
       items: [{ label: "Read the summary", isTicked: true }],
       isStartPressed: true,
       isDone: true,
+      isWaiting: false,
       lastChange: { summary: 'ticked "Read the summary"', delivery: "seen" },
     },
   ]);

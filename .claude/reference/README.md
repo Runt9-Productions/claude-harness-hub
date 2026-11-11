@@ -20,6 +20,7 @@ Notes an agent reads before the code or the tool behaviour they cover. The forma
 | [Chrome Hidden Tab Timers](domains/platform/chrome-hidden-tab-timers.md) | changing the poll interval or relying on Chrome to slow a hidden tab |
 | [Hub Skeleton](projects/hub-skeleton/overview.md) | building the first slice, issue #5 |
 | [Session Dashboard](projects/session-dashboard/overview.md) | building the dashboard and its sources, issue #6 |
+| [Waiting List](projects/waiting-list/overview.md) | building the waiting list, issue #7 |
 
 ## Local conventions
 

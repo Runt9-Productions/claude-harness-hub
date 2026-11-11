@@ -23,13 +23,15 @@ measured_on: "Chrome 157, Node 26.13.0, on Linux under WSL2"
 > the HTTP API with its `Snapshot` type, and how the page polls, as agreed with the owner on 2026-11-08 and 2026-11-09
 > before any hub code existed. On #24 the launch, token, `GET` check, header, CSP and polling lines were checked
 > against the sources listed. On #26 the 500 path, the `Snapshot` and `SessionView` types, the page's snapshot
-> reader and the line numbers cited were checked again; the other lines checked on #24 were carried forward without a
-> re-read. The `POST` checks, `POST /api/commands`, the `commands`, `usage`, `activity`, `contextPercent` and
-> `sandboxProblem` fields and the `202` reschedule are design the code does not hold yet, carried forward unchecked.
-> The measured lines were taken on 2026-11-08 while designing and were not re-run, except the `100 Continue` line,
-> taken on 2026-11-11. Not covered: the browser code's own rules ([[Hub Browser Code]]), how the sessions in a
-> snapshot are read and built ([[Hub Outside State]]), what a command does once queued ([[Hub Commands]]), and the
-> socket the plugins use ([[Hub Plugin Socket]]), which has none of these checks.
+> reader and the line numbers cited were checked again. On #27 the `DecisionView` and `OwnerTaskView` types, the
+> as-built line, the hub-decided fields line and the launch link line were checked again against `api.ts`, the page's
+> reader and `client.ts`; the other lines checked on #24 and #26 were carried forward without a re-read. The `POST`
+> checks, `POST /api/commands`, the `commands`, `usage`, `activity`, `contextPercent` and `sandboxProblem` fields and
+> the `202` reschedule are design the code does not hold yet, carried forward unchecked. The measured lines were taken
+> on 2026-11-08 while designing and were not re-run, except the `100 Continue` line, taken on 2026-11-11. Not covered:
+> the browser code's own rules and the route ([[Hub Browser Code]]), how the sessions in a snapshot are read and built
+> ([[Hub Outside State]]), what a command does once queued ([[Hub Commands]]), and the socket the plugins use
+> ([[Hub Plugin Socket]]), which has none of these checks.
 
 Read this before touching `src/server/http/browser.ts`, `src/server/main.ts`'s startup, `client.ts`, or any response
 header.
@@ -57,7 +59,7 @@ header.
 - [invariant] `client.ts` handles `#t=` on load and on `hashchange`: it replaces the hash with `#/`, sends
   `GET /api/snapshot` with the candidate, and saves it to `localStorage` only on a 200. On a 401 it keeps the stored
   token and says only "Invalid token.", since it cannot tell a stale link from a forged one. A `#t=` value that is
-  not base64url gets the same notice and sends no request (`takeLaunchLink`, `src/web/ui/client.ts:56`)
+  not base64url gets the same notice and sends no request (`takeLaunchLink`, `src/web/ui/client.ts:61`)
 - [fact] A page on another origin navigating a hub tab to `#t=x` signed out a tab that saved the token first, and
   left a tab that verified first at 200 with its token unchanged #measured (private Chrome, 2026-11-08)
 - [invariant] Every `/api/*` request sends `Authorization: Bearer <token>`. The server hashes both sides and compares
@@ -136,14 +138,14 @@ type DecisionView = {
   id: string; rev: number; createdAt?: number
   question: string; context?: string
   options: { label: string; description?: string }[]; recommended?: number
-  askedBy?: string; plugin?: string; isAnswerKept: boolean
+  askedBy?: string; plugin?: string; isAnswerKept: boolean; isWaiting: boolean
   answer?: string; chosenOption?: string; note?: string; delivery?: Delivery // once answered
 }
 type OwnerTaskView = {
   id: string; rev: number; createdAt?: number
   title: string; description?: string; postedBy?: string
   items: { label: string; isTicked: boolean }[]
-  isStartPressed: boolean; isDone: boolean
+  isStartPressed: boolean; isDone: boolean; isWaiting: boolean
   lastChange?: { summary: string; delivery: Delivery }
 }
 type TaskView = {
@@ -159,10 +161,11 @@ type CommandView = {
 ```
 
 - [fact] As built, `Snapshot` holds `runId`, `now`, `sessions` and `errors`, and `SessionView` holds every field
-  above except `sandboxProblem`, `activity` and `contextPercent`; `commands`, `usage` and those three are design
-  (`SessionView`, `src/shared/api.ts:68`)
-- [invariant] `needsYou` and `waitingCount` are decided by the hub, so the browser groups and counts cards without
-  knowing the rule; the rule is in [[Hub Outside State]]
+  above except `sandboxProblem`, `activity` and `contextPercent`; `commands`, `usage` and those three are design.
+  `DecisionView` and `OwnerTaskView` hold every field above, `isWaiting` included, which the page's reader requires
+  (`SessionView`, `src/shared/api.ts:70`; `DecisionView`, `src/shared/api.ts:28`)
+- [invariant] `needsYou`, `waitingCount` and each item's `isWaiting` are decided by the hub, so the browser groups,
+  counts and lists what waits without knowing the rule; the rule is in [[Hub Outside State]]
 - [invariant] The delivery and mode values are listed once, as `deliveries` and `modes` in `src/shared/api.ts`, and
   the types, the store schemas and the page's reader are all built from them. The page's reader throws on a value it
   does not list, which fails every poll, so a second copy that missed a value would take the whole page down

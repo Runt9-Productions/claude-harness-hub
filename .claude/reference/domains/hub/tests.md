@@ -23,8 +23,10 @@ sources:
 > 2026-11-08 and 2026-11-09 before any hub code or test existed. The `tests` job of `.github/workflows/ci.yml` was read
 > for the lines that cite it. On #24 the unit test and fixture lines were checked against the first slice's
 > `src/server/main.test.ts`, fixture script and fixtures, and on #26 the config dir, stub `claude` and fixture
-> lines were checked again against the session list and store fixtures; the `tests` job lines were carried forward
-> without a re-read. The browser test and fake plugin lines are design the code does not hold yet, carried forward
+> lines were checked again against the session list and store fixtures. On #27 the store fixture, Gamma and
+> `main.test.ts` helper lines were checked against `main.test.ts` and the board fixture, which gained `createdAt`
+> values and, for Delta, a second decision and a first owner task, both waiting; the `tests` job lines were carried
+> forward without a re-read. The browser test and fake plugin lines are design the code does not hold yet, carried forward
 > unchecked. Not covered: how CI's tools behave on little or nothing ([[CI Checks]]), the browser test job, which is
 > not in CI yet, and Playwright's behaviour, which was not measured here.
 

@@ -1,10 +1,7 @@
 import type { SessionView, SourceError, TaskView } from "../../shared/api.ts";
+import { byStart } from "./session.ts";
 
 export type Groups = { needsYou: SessionView[]; everythingElse: SessionView[] };
-
-function byStart(first: SessionView, second: SessionView): number {
-  return first.startedAt - second.startedAt;
-}
 
 /**
  * Splits the sessions into "Needs you" and "Everything else", each oldest first, so a new session joins the end of

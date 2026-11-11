@@ -26,9 +26,9 @@ export type ListedSession = {
   waitingFor?: string;
 };
 
-type StoredDecision = DecisionView & { agentId?: string };
+type StoredDecision = Omit<DecisionView, "isWaiting"> & { agentId?: string };
 
-type StoredOwnerTask = OwnerTaskView & { agentId?: string };
+type StoredOwnerTask = Omit<OwnerTaskView, "isWaiting"> & { agentId?: string };
 
 type StoredBoard = {
   decisions: readonly StoredDecision[];
@@ -114,6 +114,7 @@ function decisionView(decision: StoredDecision): DecisionView {
     question: decision.question,
     options: decision.options.map(optionView),
     isAnswerKept: decision.isAnswerKept,
+    isWaiting: isUnanswered(decision),
   };
   if (decision.createdAt !== undefined) view.createdAt = decision.createdAt;
   if (decision.context !== undefined) view.context = decision.context;
@@ -138,6 +139,7 @@ function ownerTaskView(ownerTask: StoredOwnerTask): OwnerTaskView {
     items: copyItems(ownerTask.items),
     isStartPressed: ownerTask.isStartPressed,
     isDone: ownerTask.isDone,
+    isWaiting: isUnfinished(ownerTask),
   };
   if (ownerTask.createdAt !== undefined) view.createdAt = ownerTask.createdAt;
   if (ownerTask.description !== undefined) view.description = ownerTask.description;

@@ -1,6 +1,6 @@
 import { snapshotPath, type Snapshot } from "../../shared/api.ts";
-import type { ConnectionEvent } from "../logic/connection.ts";
 import { readLaunchHash } from "../logic/launch-link.ts";
+import type { PageDispatch } from "../logic/page-state.ts";
 import { pollInterval } from "../logic/poll.ts";
 import { readRunSnapshot } from "../logic/snapshot.ts";
 
@@ -28,10 +28,11 @@ async function fetchSnapshot(token: string): Promise<SnapshotResult> {
 }
 
 /**
- * Takes a launch token from the address on load and on each `hashchange`, then polls the snapshot one request at a
- * time, re-reading the saved token each time so a link opened in another tab recovers this one.
+ * Takes a launch token from the address on load and on each `hashchange`, reads the route again on each `hashchange`
+ * and after the launch link's rewrite to `#/`, then polls the snapshot one request at a time, re-reading the saved
+ * token each time so a link opened in another tab recovers this one.
  */
-export function startClient(dispatch: (event: ConnectionEvent) => void): void {
+export function startClient(dispatch: PageDispatch): void {
   let runId: string | undefined;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let isRequestInFlight = false;
@@ -51,13 +52,18 @@ export function startClient(dispatch: (event: ConnectionEvent) => void): void {
     return read.snapshot;
   }
 
+  function followRoute(): void {
+    dispatch({ kind: "routeChanged", hash: location.hash });
+  }
+
   // The token is saved only once the hub accepts it, so a page on another origin that navigates this tab to a wrong
   // #t= cannot replace a working token.
   async function takeLaunchLink(): Promise<void> {
     const launch = readLaunchHash(location.hash);
     if (launch.kind === "absent") return;
-    // Removes the token from the address bar and history without firing hashchange.
+    // Removes the token from the address bar and history without firing hashchange, so the route is read again here.
     history.replaceState(null, "", "#/");
+    followRoute();
     if (launch.kind === "malformed") {
       dispatch({ kind: "linkRejected" });
       return;
@@ -116,7 +122,10 @@ export function startClient(dispatch: (event: ConnectionEvent) => void): void {
     schedule(delayMs);
   }
 
-  window.addEventListener("hashchange", () => void takeLaunchLink());
+  window.addEventListener("hashchange", () => {
+    followRoute();
+    void takeLaunchLink();
+  });
   document.addEventListener("visibilitychange", onVisibilityChange);
   void takeLaunchLink().then(poll);
 }

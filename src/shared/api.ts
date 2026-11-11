@@ -36,6 +36,7 @@ export type DecisionView = {
   askedBy?: string;
   plugin?: string;
   isAnswerKept: boolean;
+  isWaiting: boolean;
   answer?: string;
   chosenOption?: string;
   /** Present only once answered. */
@@ -53,6 +54,7 @@ export type OwnerTaskView = {
   items: Item[];
   isStartPressed: boolean;
   isDone: boolean;
+  isWaiting: boolean;
   lastChange?: { summary: string; delivery: Delivery };
 };
 
@@ -85,7 +87,7 @@ export type SessionView = {
   ownerTasks: OwnerTaskView[];
   tasks: TaskView[];
   needsYou: boolean;
-  /** Unanswered decisions plus unfinished owner tasks. */
+  /** The number of decisions and owner tasks with `isWaiting`. */
   waitingCount: number;
   hasUnreadAnswers: boolean;
   canAnswer: boolean;

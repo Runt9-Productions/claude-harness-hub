@@ -9,7 +9,7 @@ tags: ["skeleton"]
 
 ## Status
 
-- **Live item:** none; the slice is built and goes to review
+- **Live item:** none
 - **How far along:** 01, 02 and 03 built
 - **Blocked on:** nothing
 - **Last moved:** 2026-11-11

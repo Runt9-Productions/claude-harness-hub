@@ -3,7 +3,7 @@ title: Hub Skeleton
 type: note
 permalink: projects/hub-skeleton/overview
 tags: ["skeleton", "server", "browser", "preact", "launch-token"]
-status: implementation
+status: complete
 opened: "2026-11-11"
 ---
 
@@ -15,7 +15,8 @@ is refused. It ends when that pull request merges and `gate` passes on it.
 
 ## Where it stands
 
-- [status] All three checklist items built; the pull request, its reviews and the owner's CI commit come next
+- [status] Built: the server shell, the Preact page and the fixture hub, with CI type-checking the browser and e2e
+  projects and covering `src/web/logic`. Its durable facts are in the hub notes under `domains/hub/`
 
 ## Documents
 

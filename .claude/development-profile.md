@@ -90,7 +90,8 @@ a knowledge base note already answers a question, this file points there.
   no verification runs before it does. It copies the checked-in fixtures to a new temporary directory, sets `HOME` and
   `CLAUDE_CONFIG_DIR` to the copy, puts a stub `claude` first on `PATH` and runs `src/e2e/fixture-main.ts`, which
   calls `start(config)` on a free port and prints the link. Every run starts from the same state and the hub cannot
-  reach the real `~/.claude` or live sessions, with no test-only path in the hub's code.
+  reach the real `~/.claude` or live sessions, with no test-only path in the hub's code. The script runs with the Bash
+  sandbox off: inside it the hub gets its own network namespace, and headless Chrome cannot reach its port.
 - Evidence: the steps, what each showed, and screenshots attached with
   `gh pr comment <n> --body-file <file> --attach '<image>#<alt text>'` (gh 2.99 or newer). No scan reads an image, so
   every image is looked at before it is posted. The attachment upload refuses the bot's App token, so the lead

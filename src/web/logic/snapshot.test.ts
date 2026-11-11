@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Snapshot } from "../../shared/api.ts";
-import { readSnapshot } from "./snapshot.ts";
+import { readRunId, readSnapshot } from "./snapshot.ts";
 
 const body: Snapshot = {
   runId: "run-a",
@@ -30,4 +30,9 @@ void test("a body that does not fit the snapshot throws naming what does not fit
     /field sessionId is not a string/,
   );
   assert.throws(() => readSnapshot([]), /snapshot is not an object/);
+});
+
+void test("readRunId reads the runId from a body whose other fields do not fit, and throws on one that is not a string", () => {
+  assert.equal(readRunId({ runId: "run-b", sessions: [{}] }), "run-b");
+  assert.throws(() => readRunId({ ...body, runId: 7 }), /field runId is not a string/);
 });

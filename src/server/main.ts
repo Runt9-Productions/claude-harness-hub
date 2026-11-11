@@ -3,9 +3,9 @@ import { once } from "node:events";
 import { createServer } from "node:http";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
-import type { Snapshot } from "../shared/api.ts";
+import { launchLink, type Snapshot } from "../shared/api.ts";
 import { buildAssetTable, iconUrl, importMap, pageScriptUrl, stylesheetUrl } from "./http/assets.ts";
-import { createBrowserHandler } from "./http/browser.ts";
+import { createBrowserHandler, createClientErrorHandler } from "./http/browser.ts";
 
 export type HubConfig = {
   /** 0 picks a free port. */
@@ -46,6 +46,7 @@ export async function start(config: HubConfig): Promise<RunningHub> {
   const snapshot = (): Snapshot => ({ runId, now: Date.now(), sessions: [], errors: [] });
 
   const server = createServer();
+  server.on("clientError", createClientErrorHandler(importMapText));
   server.listen(config.port, "127.0.0.1");
   await once(server, "listening");
   const address = server.address();
@@ -96,7 +97,7 @@ async function runFromCommandLine(): Promise<void> {
     process.exitCode = 1;
     return;
   }
-  console.log(`http://127.0.0.1:${hub.port}/#t=${hub.token}`);
+  console.log(launchLink(hub.port, hub.token));
 }
 
 if (import.meta.main) await runFromCommandLine();

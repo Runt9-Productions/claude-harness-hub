@@ -43,14 +43,14 @@ build.
 - [trap] `tsc` emits even when it reports errors, so `npm start` runs `tsc -p src/web/tsconfig.json && node
   src/server/main.ts` and a type error stops the start #silent-failure
 - [invariant] `main.ts` builds paths from `import.meta.url`, never the working directory (`runFromCommandLine`,
-  `src/server/main.ts:89`)
+  `src/server/main.ts:90`)
 - [invariant] Preact is served from the installed package as three files: `dist/preact.mjs`, `hooks/dist/hooks.mjs`
   and `jsx-runtime/dist/jsxRuntime.mjs`. Emitted code and Preact's own files import the bare name `preact`, which
   the page's inline import map resolves. The map is built from the same list as the `/vendor/` URLs (`importMap`,
-  `src/server/http/assets.ts:137`)
+  `src/server/http/assets.ts:34`)
 - [invariant] At startup the server lists `dist/browser/`, `src/web/styles.css`, the Preact files and an SVG icon
   into a `Map` from exact URL to file and content type, and reads the bytes on each request. A request matches a key
-  or gets 404, so no request path is ever joined to a directory (`buildAssetTable`, `src/server/http/assets.ts:165`)
+  or gets 404, so no request path is ever joined to a directory (`buildAssetTable`, `src/server/http/assets.ts:62`)
 - [trap] The table refuses to build on a missing fixed file, a missing `dist/browser/`, a duplicate URL or an
   extension other than `.js`, `.mjs`, `.css` and `.svg`, so a `sourceMap` or `declaration` option in the browser
   build stops every start until its type is added to `contentTypes`

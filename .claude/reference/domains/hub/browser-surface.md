@@ -38,7 +38,9 @@ header.
   nobody while every session with the plugin connects to it, and printing the link would put the token in an agent's
   transcript (owner, 2026-11-08)
 - [invariant] `npm start` makes a random 32-byte token held only in memory and prints
-  `http://127.0.0.1:<port>/#t=<token>` once. Tests and the fixture script call `start(config)` instead
+  `http://127.0.0.1:<port>/#t=<token>` once. Tests and the fixture script call `start(config)` instead. `npm start`
+  and the fixture script print the link from one function, whose output a test reads back with the page's `readLaunchHash` (`launchLink`,
+  `src/shared/api.ts:8`)
 - [fact] A script run through `npm start` saw a terminal on stdout under a pty and none when piped, `--port` reached
   it, and `import.meta.main` was true when run and false when imported #measured (2026-11-08)
 - [invariant] The port is fixed so the origin and the saved token stay put across restarts: 47821, or `--port <n>`.
@@ -50,7 +52,7 @@ header.
 - [invariant] `client.ts` handles `#t=` on load and on `hashchange`: it replaces the hash with `#/`, sends
   `GET /api/snapshot` with the candidate, and saves it to `localStorage` only on a 200. On a 401 it keeps the stored
   token and says only "Invalid token.", since it cannot tell a stale link from a forged one. A `#t=` value that is
-  not base64url gets the same notice and sends no request (`takeLaunchLink`, `src/web/ui/client.ts:54`)
+  not base64url gets the same notice and sends no request (`takeLaunchLink`, `src/web/ui/client.ts:56`)
 - [fact] A page on another origin navigating a hub tab to `#t=x` signed out a tab that saved the token first, and
   left a tab that verified first at 200 with its token unchanged #measured (private Chrome, 2026-11-08)
 - [invariant] Every `/api/*` request sends `Authorization: Bearer <token>`. The server hashes both sides and compares
@@ -65,7 +67,7 @@ header.
   exact `Origin`, `Content-Type: application/json`, a 64 KiB body cap, then the schema #order-dependent
 - [fact] As built, a wrong `Host` answers 421, an unknown path 404 whatever the method, a method other than `GET` on
   a known path 405 with `Allow: GET`, and a missing or wrong token 401 with `WWW-Authenticate: Bearer`, in that order.
-  No route accepts a `POST` yet (`reply`, `src/server/http/browser.ts:76`)
+  No route accepts a `POST` yet (`reply`, `src/server/http/browser.ts:110`)
 - [invariant] The route is matched on the raw path before `?`, never a normalised one, so only a path spelled exactly
   as a route matches it
 - [fact] `curl.exe` on the Windows side reached a server bound to `127.0.0.1` in WSL2 and sent
@@ -74,6 +76,9 @@ header.
 - [invariant] Logs and error messages name fields, never board text or other values
 - [invariant] Every response carries the CSP below, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`
   and `Cache-Control: no-store` (so board text is not cached on disk). There are no CORS headers
+- [trap] Node answers a request it cannot parse (400) or whose headers pass its limit (431) itself, with none of these
+  headers, unless the server has a `clientError` listener. The hub's listener answers the same status with them
+  (`createClientErrorHandler`, `src/server/http/browser.ts:64`)
 
 ```
 default-src 'none'; script-src 'self' 'sha256-<import map>'; style-src 'self'; connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; require-trusted-types-for 'script'; trusted-types 'none'
@@ -137,8 +142,9 @@ type CommandView = {
 ```
 
 - [fact] The `Snapshot` type built so far holds `runId`, `now`, `sessions` typed as an always empty list, and
-  `errors`; the rest above is design (`Snapshot`, `src/shared/api.ts:10`)
-- [invariant] `runId` is constant for a run; when it changes the page reloads to get the new code
+  `errors`; the rest above is design (`Snapshot`, `src/shared/api.ts:18`)
+- [invariant] `runId` is constant for a run; when it changes the page reloads to get the new code. It is read and
+  compared before the rest of the body is narrowed, since a restarted hub may serve a shape the old page rejects
 - [invariant] Relative times count from the snapshot's `now`, not the browser's clock, because WSL2's clock can lag
   the host's after sleep
 
@@ -149,8 +155,9 @@ type CommandView = {
 - [invariant] `client.ts` fetches `GET /api/snapshot` with chained `setTimeout`, one request at a time: every 2 seconds
   while visible and every 30 seconds while `document.hidden`, the interval chosen by a pure function in `logic`
 - [invariant] The visibility event and a `202` reschedule the same loop rather than starting a second fetch
-- [invariant] Every request uses `AbortSignal.timeout(8000)`, which outlasts the server's 5 second `claude agents`
-  timeout; `fetch` has no default timeout, so one hung request would end a chained loop for good #silent-failure
+- [invariant] Every request uses `AbortSignal.timeout(8000)`; `fetch` has no default timeout, so one hung request
+  would end a chained loop for good #silent-failure. The 8 seconds is meant to outlast the 5 second `claude agents`
+  timeout in [[Hub Outside State]], which is not built yet
 - [invariant] The 30 second hidden interval is the hub's own choice: Chrome does not slow this loop, see
   [[Chrome Hidden Tab Timers]]. Without it a dashboard left up costs about 5% of a core all day
 - [invariant] Every poll dispatches with no `ETag`: Preact changes no DOM when nothing changed, and rendering costs

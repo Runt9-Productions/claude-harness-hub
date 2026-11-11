@@ -1,6 +1,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import type { IncomingMessage, ServerResponse } from "node:http";
+import { STATUS_CODES, type IncomingMessage, type ServerResponse } from "node:http";
+import type { Duplex } from "node:stream";
 import { apiPrefix, snapshotPath, type Snapshot } from "../../shared/api.ts";
 import type { Asset } from "./assets.ts";
 
@@ -38,6 +39,42 @@ export function contentSecurityPolicy(importMap: string): string {
   ].join("; ");
 }
 
+function fixedHeaders(importMap: string): Record<string, string> {
+  return {
+    "Content-Security-Policy": contentSecurityPolicy(importMap),
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+    "Cache-Control": "no-store",
+  };
+}
+
+/** The statuses Node itself would answer with. */
+function clientErrorStatus(error: Error): number {
+  if (!("code" in error)) return 400;
+  if (error.code === "HPE_HEADER_OVERFLOW") return 431;
+  if (error.code === "ERR_HTTP_REQUEST_TIMEOUT") return 408;
+  return 400;
+}
+
+/**
+ * Answers a request Node cannot parse, such as a bad request line or oversized headers, with the fixed headers that
+ * Node's own reply lacks. There is no response object, so the reply is written to the socket raw.
+ */
+export function createClientErrorHandler(importMap: string): (error: Error, socket: Duplex) => void {
+  const headers = { ...fixedHeaders(importMap), "Content-Length": "0", Connection: "close" };
+  const headerLines = Object.entries(headers).map(([name, value]) => `${name}: ${value}\r\n`);
+
+  return function handleClientError(error: Error, socket: Duplex): void {
+    if (!socket.writable) {
+      socket.destroy();
+      return;
+    }
+    const status = clientErrorStatus(error);
+    const statusLine = `HTTP/1.1 ${status} ${STATUS_CODES[status] ?? ""}\r\n`;
+    socket.end(`${statusLine}${headerLines.join("")}\r\n`);
+  };
+}
+
 function plain(status: number, text: string, headers: Record<string, string> = {}): Reply {
   return { status, contentType: "text/plain; charset=utf-8", body: text, headers };
 }
@@ -52,12 +89,7 @@ function requestPath(url: string): string {
 export function createBrowserHandler(config: BrowserHandlerConfig) {
   const expectedHost = `127.0.0.1:${config.port}`;
   const tokenHash = sha256(config.token);
-  const commonHeaders = {
-    "Content-Security-Policy": contentSecurityPolicy(config.importMap),
-    "X-Content-Type-Options": "nosniff",
-    "Referrer-Policy": "no-referrer",
-    "Cache-Control": "no-store",
-  };
+  const commonHeaders = fixedHeaders(config.importMap);
 
   function findRoute(path: string): Route | undefined {
     if (path === "/") return { kind: "page" };
@@ -70,7 +102,8 @@ export function createBrowserHandler(config: BrowserHandlerConfig) {
   function hasToken(request: IncomingMessage): boolean {
     const authorization = request.headers.authorization;
     if (authorization?.startsWith("Bearer ") !== true) return false;
-    return timingSafeEqual(sha256(authorization.slice("Bearer ".length)), tokenHash);
+    const presented = authorization.slice("Bearer ".length);
+    return timingSafeEqual(sha256(presented), tokenHash);
   }
 
   async function reply(request: IncomingMessage): Promise<Reply> {

@@ -39,6 +39,12 @@ Rulings for the first slice. The design itself is in the hub notes under `domain
 - [decision] The refused-link notice says only that the token is invalid, nothing about where it came from or what
   it could be, settling whether it keeps "from an earlier run" (owner, 2026-11-11)
 
+- [decision] `CLAUDE.md` "Layout" gains a line each for `scripts/` and `dist/`, on this pull request (owner,
+  2026-11-11)
+- [decision] A short `README.md` on how to start the hub goes on this pull request (owner, 2026-11-11)
+- [proposal] The command line's tests past the terminal check go to a `from-review` issue, since they need a
+  pseudo-terminal or a refactor (made)
+
 ## Open Questions
 
 None.

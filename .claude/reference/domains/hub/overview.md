@@ -50,7 +50,7 @@ simplification can go back to the owner.
 
 | Module | Holds | May import |
 |---|---|---|
-| `src/shared` | One file: snapshot and browser command types, and constant lists of allowed values. No validator | Nothing |
+| `src/shared` | One file: snapshot and browser command types, constant lists of allowed values, and the launch link's format. No validator | Nothing |
 | `src/server/hub` | Pure functions: build the snapshot, check a command, run the command queue. Time is passed in | `shared` |
 | `src/server/sources` | `agents.ts`, `stores.ts`: run or read outside state, validate it, keep the last good copy | `shared`, `node:*`, `zod` |
 | `src/server/http` | `browser.ts` (checks, routes), `plugin.ts` (socket routes), `assets.ts`, `body.ts` (capped JSON). Behaviour comes in as function arguments | `shared`, `node:*`, `zod` |

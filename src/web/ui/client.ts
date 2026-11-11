@@ -2,17 +2,14 @@ import { snapshotPath, type Snapshot } from "../../shared/api.ts";
 import type { ConnectionEvent } from "../logic/connection.ts";
 import { readLaunchHash } from "../logic/launch-link.ts";
 import { pollInterval } from "../logic/poll.ts";
-import { readSnapshot } from "../logic/snapshot.ts";
+import { readRunId, readSnapshot } from "../logic/snapshot.ts";
 
 const tokenKey = "hub.token";
-// Outlasts the server's 5 second `claude agents` timeout. fetch has no timeout of its own, so without this one hung
-// request would end the chained poll for good.
+// fetch has no timeout of its own, so without this one hung request would end the chained poll for good.
 const requestTimeoutMs = 8000;
 
-type SnapshotResult = { kind: "snapshot"; snapshot: Snapshot } | { kind: "unauthorized" } | { kind: "failed" };
+type SnapshotResult = { kind: "snapshot"; body: unknown } | { kind: "unauthorized" } | { kind: "failed" };
 
-// A body that is not a snapshot throws past this function, so it reaches the failure banner rather than reading as a
-// hub that is not responding.
 async function fetchSnapshot(token: string): Promise<SnapshotResult> {
   let body: unknown;
   try {
@@ -27,7 +24,7 @@ async function fetchSnapshot(token: string): Promise<SnapshotResult> {
     // fetch and the body read reject when the hub is unreachable or the timeout fires: the hub is not responding.
     return { kind: "failed" };
   }
-  return { kind: "snapshot", snapshot: readSnapshot(body) };
+  return { kind: "snapshot", body };
 }
 
 /**
@@ -39,14 +36,19 @@ export function startClient(dispatch: (event: ConnectionEvent) => void): void {
   let timer: ReturnType<typeof setTimeout> | undefined;
   let isRequestInFlight = false;
 
-  /** Reloads the page for the new run's code when the hub restarted, and says whether it did. */
-  function reloadsForNewRun(snapshot: Snapshot): boolean {
-    if (runId !== undefined && snapshot.runId !== runId) {
+  /**
+   * Narrows the body, or reloads the page for the new run's code and returns undefined when the hub restarted. The
+   * `runId` is compared before narrowing, since a restarted hub may serve a shape this build rejects. Any other body
+   * that is not a snapshot throws, so it reaches the failure banner rather than reading as a hub not responding.
+   */
+  function readForThisRun(body: unknown): Snapshot | undefined {
+    const bodyRunId = readRunId(body);
+    if (runId !== undefined && bodyRunId !== runId) {
       location.reload();
-      return true;
+      return undefined;
     }
-    runId = snapshot.runId;
-    return false;
+    runId = bodyRunId;
+    return readSnapshot(body);
   }
 
   // The token is saved only once the hub accepts it, so a page on another origin that navigates this tab to a wrong
@@ -70,8 +72,9 @@ export function startClient(dispatch: (event: ConnectionEvent) => void): void {
       return;
     }
     localStorage.setItem(tokenKey, launch.token);
-    if (reloadsForNewRun(result.snapshot)) return;
-    dispatch({ kind: "linkAccepted", snapshot: result.snapshot });
+    const snapshot = readForThisRun(result.body);
+    if (snapshot === undefined) return;
+    dispatch({ kind: "linkAccepted", snapshot });
   }
 
   async function pollOnce(): Promise<void> {
@@ -85,8 +88,9 @@ export function startClient(dispatch: (event: ConnectionEvent) => void): void {
       dispatch({ kind: result.kind });
       return;
     }
-    if (reloadsForNewRun(result.snapshot)) return;
-    dispatch({ kind: "received", snapshot: result.snapshot });
+    const snapshot = readForThisRun(result.body);
+    if (snapshot === undefined) return;
+    dispatch({ kind: "received", snapshot });
   }
 
   function schedule(delayMs: number): void {

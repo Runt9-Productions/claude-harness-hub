@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { once } from "node:events";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { createServer, request, type IncomingHttpHeaders, type Server } from "node:http";
+import { connect } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { test, type TestContext } from "node:test";
@@ -67,6 +68,27 @@ function send(port: number, path: string, options: SendOptions = {}) {
     });
     outgoing.end();
   });
+}
+
+function headerField(line: string): [string, string] {
+  const match = /^([^:]+): (.*)$/.exec(line);
+  assert.ok(match?.[1] !== undefined && match[2] !== undefined, `a header line: ${line}`);
+  return [match[1].toLowerCase(), match[2]];
+}
+
+/** Sends bytes as they are, which `send` cannot when Node's request parser is meant to reject them. */
+async function sendRaw(port: number, bytes: string): Promise<Reply> {
+  const socket = connect(port, "127.0.0.1");
+  const chunks: Buffer[] = [];
+  socket.on("data", (chunk: Buffer) => chunks.push(chunk));
+  socket.end(bytes);
+  await once(socket, "close");
+  const [head = "", body = ""] = Buffer.concat(chunks).toString().split("\r\n\r\n");
+  const [statusLine = "", ...headerLines] = head.split("\r\n");
+  const status = /^HTTP\/1\.1 (\d{3}) /.exec(statusLine)?.[1];
+  assert.ok(status !== undefined, `a status line: ${statusLine}`);
+  const headers = Object.fromEntries(headerLines.map(headerField));
+  return { status: Number(status), headers, body };
 }
 
 function fieldsOf(value: unknown): Map<string, unknown> {
@@ -164,6 +186,8 @@ void test("every kind of response carries its status and own headers, and the CS
     "img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; " +
     "require-trusted-types-for 'script'; trusted-types 'none'";
   await rm(join(root, "src/web/icon.svg"));
+  // Over Node's default 16 KiB header limit.
+  const oversizedHeaders = `GET / HTTP/1.1\r\nHost: 127.0.0.1:${hub.port}\r\nX-Padding: ${"a".repeat(20_000)}\r\n\r\n`;
 
   const cases: [string, number, Record<string, string>, Promise<Reply>][] = [
     ["page", 200, {}, Promise.resolve(page)],
@@ -174,6 +198,8 @@ void test("every kind of response carries its status and own headers, and the CS
     ["post", 405, { allow: "GET" }, send(hub.port, "/", { method: "POST" })],
     ["wrong host", 421, {}, send(hub.port, "/", { headers: { host: "localhost" } })],
     ["asset gone since startup", 500, {}, send(hub.port, "/assets/icon.svg")],
+    ["unparseable request", 400, { connection: "close" }, sendRaw(hub.port, "BOGUS\r\n\r\n")],
+    ["oversized headers", 431, { connection: "close" }, sendRaw(hub.port, oversizedHeaders)],
   ];
   for (const [kind, status, ownHeaders, pending] of cases) {
     const reply = await pending;
@@ -193,7 +219,8 @@ void test("every kind of response carries its status and own headers, and the CS
 void test("only the listed asset URLs are served, from their files as they are now", async (t) => {
   const { hub, root } = await startFixtureHub(t);
   const page = await send(hub.port, "/");
-  const imports = fieldsOf(fieldsOf(JSON.parse(importMapOf(page.body))).get("imports"));
+  const importMap = fieldsOf(JSON.parse(importMapOf(page.body)));
+  const imports = fieldsOf(importMap.get("imports"));
   const served: [string, string, string][] = [
     ["/assets/web/ui/main.js", javascript, fixtureFiles["dist/browser/web/ui/main.js"]],
     ["/assets/styles.css", "text/css; charset=utf-8", fixtureFiles["src/web/styles.css"]],

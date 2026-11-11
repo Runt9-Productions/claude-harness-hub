@@ -3,12 +3,13 @@ import type { SessionView, SourceError, TaskView } from "../../shared/api.ts";
 import {
   cardTasks,
   columnCount,
-  dealIntoColumns,
   groupSessions,
   isBlocked,
+  isSamePlacement,
+  placeInColumns,
   sessionState,
   shownTaskCount,
-  waitingCount,
+  type Columns,
 } from "../logic/dashboard.ts";
 import type { PageDispatch } from "../logic/page-state.ts";
 
@@ -107,13 +108,12 @@ function Tasks({
 type CardProps = { session: SessionView; errors: readonly SourceError[]; isExpanded: boolean; dispatch: PageDispatch };
 
 function Card({ session, errors, isExpanded, dispatch }: CardProps) {
-  const waiting = waitingCount(session);
   return (
     <article class="card" data-needs-you={session.needsYou}>
       <header class="card-head">
         <span class="dot" data-tone={sessionTone(session)} aria-hidden="true" />
         <h3 class="card-name">{session.name ?? session.shortId ?? session.key}</h3>
-        {waiting > 0 && <span class="waiting-count">{waiting} waiting</span>}
+        {session.waitingCount > 0 && <span class="waiting-count">{session.waitingCount} waiting</span>}
       </header>
       <StateLine session={session} />
       <p class="card-dir">{session.cwd}</p>
@@ -164,7 +164,19 @@ type GroupProps = {
   dispatch: PageDispatch;
 };
 
+/**
+ * Holds the placement across renders, so a card keeps its column while it stays in the group. The state is set during
+ * render only when the placement changed, so the render that follows places the same way and stops.
+ */
+function useHeldColumns(sessions: readonly SessionView[], count: number): Columns {
+  const [held, setHeld] = useState<Columns>([]);
+  const placed = placeInColumns(sessions, count, held);
+  if (!isSamePlacement(placed, held)) setHeld(placed);
+  return placed;
+}
+
 function Group({ label, sessions, columns, errorsBySession, expandedCards, dispatch }: GroupProps) {
+  const placed = useHeldColumns(sessions, columns);
   if (sessions.length === 0) return null;
   return (
     <section class="group">
@@ -172,7 +184,7 @@ function Group({ label, sessions, columns, errorsBySession, expandedCards, dispa
         {label} ({sessions.length})
       </h2>
       <div class="columns">
-        {dealIntoColumns(sessions, columns).map((column, index) => (
+        {placed.map((column, index) => (
           <div key={index} class="column">
             {column.map((session) => (
               <CardBoundary
@@ -193,7 +205,8 @@ function Group({ label, sessions, columns, errorsBySession, expandedCards, dispa
 type DashboardProps = Omit<GroupProps, "label" | "sessions" | "columns"> & { sessions: readonly SessionView[] };
 
 export function Dashboard({ sessions, ...rest }: DashboardProps) {
-  const columns = columnCount(useViewportWidth());
+  const viewportWidth = useViewportWidth();
+  const columns = columnCount(viewportWidth);
   if (sessions.length === 0) return <p class="empty">No sessions are listed.</p>;
   const groups = groupSessions(sessions);
   return (

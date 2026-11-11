@@ -98,14 +98,21 @@ void test("parses a file again only when its modified time or size changed, and 
   const unchanged = await stores.read(sessionIds, 1);
   assert.equal(unchanged.sessions.get("fixture-one")?.mode, "away", "same time and size: the copy already read");
 
+  await writeStore(storeDir, "away_one.json", { "session:fixture-two": "distracted" });
+  await utimes(path, 1000, 1000);
+  const resized = await stores.read(sessionIds, 2);
+  assert.equal(resized.sessions.get("fixture-one")?.mode, undefined, "same time, new size: read again");
+  assert.equal(resized.sessions.get("fixture-two")?.mode, "distracted");
+
+  await writeStore(storeDir, "away_one.json", { "session:fixture-one": "distracted" });
   await utimes(path, 2000, 2000);
-  const touched = await stores.read(sessionIds, 2);
-  assert.equal(touched.sessions.get("fixture-one")?.mode, undefined);
-  assert.equal(touched.sessions.get("fixture-two")?.mode, "away");
+  const touched = await stores.read(sessionIds, 3);
+  assert.equal(touched.sessions.get("fixture-one")?.mode, "distracted", "same size, new time: read again");
+  assert.equal(touched.sessions.get("fixture-two")?.mode, undefined);
 
   await rm(path);
-  const gone = await stores.read(sessionIds, 3);
-  assert.equal(gone.sessions.get("fixture-two")?.mode, undefined);
+  const gone = await stores.read(sessionIds, 4);
+  assert.equal(gone.sessions.get("fixture-one")?.mode, undefined);
 });
 
 void test("keeps the last good copy of a file that fails to parse, and reports it once it has failed for 10 seconds", async (t) => {
@@ -117,6 +124,8 @@ void test("keeps the last good copy of a file that fails to parse, and reports i
   await writeFile(path, '{"session:fixture-one": "dis');
 
   const withinGrace = await stores.read(sessionIds, 1000);
+  // Still broken after a rewrite, so the 10 seconds still run from the first failed read.
+  await writeFile(path, '{"session:fixture-one": "aw');
   const lastMoment = await stores.read(sessionIds, 10_999);
   const afterGrace = await stores.read(sessionIds, 11_000);
   await writeStore(storeDir, "away_one.json", { "session:fixture-one": "distracted" });

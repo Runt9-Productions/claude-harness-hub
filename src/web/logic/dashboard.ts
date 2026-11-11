@@ -74,13 +74,6 @@ export function placeErrors(errors: readonly SourceError[], sessions: readonly S
   return placed;
 }
 
-/** Unanswered decisions and unfinished owner tasks, the items the waiting list will hold. */
-export function waitingCount(session: SessionView): number {
-  const unanswered = session.decisions.filter((decision) => decision.answer === undefined);
-  const unfinished = session.ownerTasks.filter((ownerTask) => !ownerTask.isDone);
-  return unanswered.length + unfinished.length;
-}
-
 const minimumColumnWidthPx = 400;
 const columnGapPx = 16;
 const pagePaddingPx = 64;
@@ -91,14 +84,47 @@ export function columnCount(viewportWidthPx: number): number {
   return Math.max(1, Math.floor(fitting));
 }
 
+/** One group's cards by column, left to right. */
+export type Columns = readonly (readonly SessionView[])[];
+
+function columnSizes(columnByKey: ReadonlyMap<string, number>, count: number): number[] {
+  const placed = [...columnByKey.values()];
+  return Array.from({ length: count }, (_, column) => placed.filter((held) => held === column).length);
+}
+
 /**
- * Deals the cards into `count` columns left to right, so a card that grows pushes down only the cards beneath it in
- * its own column.
+ * Keeps each card in its column in `previous`, this function's last result for the group, and puts a card new to the
+ * group in the column with the fewest cards, the leftmost on a tie, so a card joining or leaving moves no other card.
+ * A `count` other than the previous one places every card afresh. Each column keeps the order of `cards`.
  */
-export function dealIntoColumns<T>(cards: readonly T[], count: number): T[][] {
-  const columns = Array.from({ length: count }, (): T[] => []);
-  for (const [index, card] of cards.entries()) columns[index % count]?.push(card);
-  return columns;
+export function placeInColumns(cards: readonly SessionView[], count: number, previous: Columns): SessionView[][] {
+  const heldColumnByKey = new Map<string, number>();
+  const heldColumns = previous.length === count ? previous : [];
+  for (const [column, held] of heldColumns.entries()) {
+    for (const card of held) heldColumnByKey.set(card.key, column);
+  }
+  const columnByKey = new Map<string, number>();
+  for (const card of cards) {
+    const held = heldColumnByKey.get(card.key);
+    if (held !== undefined) columnByKey.set(card.key, held);
+  }
+  for (const card of cards) {
+    if (columnByKey.has(card.key)) continue;
+    const sizes = columnSizes(columnByKey, count);
+    const fewest = Math.min(...sizes);
+    columnByKey.set(card.key, sizes.indexOf(fewest));
+  }
+  return Array.from({ length: count }, (_, column) => cards.filter((card) => columnByKey.get(card.key) === column));
+}
+
+function layout(columns: Columns): string {
+  const keysByColumn = columns.map((column) => column.map((card) => card.key));
+  return JSON.stringify(keysByColumn);
+}
+
+/** Whether both put the same session keys in the same columns, in the same order. */
+export function isSamePlacement(first: Columns, second: Columns): boolean {
+  return layout(first) === layout(second);
 }
 
 export const shownTaskCount = 3;
@@ -121,7 +147,8 @@ function blockedFirst(first: TaskView, second: TaskView): number {
 }
 
 export function cardTasks(tasks: readonly TaskView[], isExpanded: boolean): CardTasks {
-  const open = tasks.filter((task) => task.status !== "done").toSorted(blockedFirst);
+  const unordered = tasks.filter((task) => task.status !== "done");
+  const open = unordered.toSorted(blockedFirst);
   const shown = isExpanded ? open : open.slice(0, shownTaskCount);
   return {
     shown,

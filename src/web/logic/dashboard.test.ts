@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { DecisionView, OwnerTaskView, SessionView, TaskView } from "../../shared/api.ts";
+import type { SessionView, TaskView } from "../../shared/api.ts";
 import {
   cardTasks,
   columnCount,
   countByState,
-  dealIntoColumns,
   groupSessions,
+  isSamePlacement,
   placeErrors,
-  waitingCount,
+  placeInColumns,
 } from "./dashboard.ts";
 
 function session(key: string, fields: Partial<SessionView> = {}): SessionView {
@@ -22,6 +22,7 @@ function session(key: string, fields: Partial<SessionView> = {}): SessionView {
     ownerTasks: [],
     tasks: [],
     needsYou: false,
+    waitingCount: 0,
     hasUnreadAnswers: false,
     canAnswer: false,
     canSetMode: false,
@@ -69,12 +70,40 @@ void test("a 1920 pixel screen fits 4 columns and a narrow one still gets one", 
   assert.equal(columnCount(320), 1);
 });
 
-void test("cards are dealt left to right across the columns, and one card leaves the other columns empty", () => {
-  assert.deepEqual(dealIntoColumns(["a", "b", "c", "d", "e"], 2), [
+function cards(...cardKeys: string[]): SessionView[] {
+  return cardKeys.map((key) => session(key));
+}
+
+function columnKeys(columns: readonly (readonly SessionView[])[]): string[][] {
+  return columns.map(keys);
+}
+
+void test("a card entering a group takes the column with the fewest cards, and one leaving moves no other card", () => {
+  const first = placeInColumns(cards("a", "b", "c", "d", "e"), 2, []);
+  assert.deepEqual(columnKeys(first), [
     ["a", "c", "e"],
     ["b", "d"],
   ]);
-  assert.deepEqual(dealIntoColumns(["a"], 4), [["a"], [], [], []]);
+  const afterLeaving = placeInColumns(cards("a", "c", "d", "e"), 2, first);
+  assert.deepEqual(columnKeys(afterLeaving), [["a", "c", "e"], ["d"]]);
+  const afterEntering = placeInColumns(cards("a", "c", "d", "e", "f"), 2, afterLeaving);
+  assert.deepEqual(columnKeys(afterEntering), [
+    ["a", "c", "e"],
+    ["d", "f"],
+  ]);
+});
+
+void test("placing the same cards again matches the held placement, and a card that moved does not", () => {
+  const held = [cards("a", "c"), cards("b")];
+  const placedAgain = placeInColumns(cards("a", "b", "c"), 2, held);
+  assert.equal(isSamePlacement(placedAgain, held), true);
+  assert.equal(isSamePlacement([cards("a"), cards("b", "c")], held), false);
+});
+
+void test("a new column count places every card afresh", () => {
+  const twoColumns = [cards("a", "c", "e"), cards("d", "f")];
+  const threeColumns = placeInColumns(cards("a", "c", "d", "e", "f"), 3, twoColumns);
+  assert.deepEqual(columnKeys(threeColumns), [["a", "e"], ["c", "f"], ["d"]]);
 });
 
 function task(id: string, status: string): TaskView {
@@ -118,21 +147,4 @@ void test("an error for a session with a card goes to that card, and any other e
   const placed = placeErrors([forCard, forNobody, forHidden], [session("listed")]);
   assert.deepEqual([...placed.bySession], [["listed", [forCard]]]);
   assert.deepEqual(placed.general, [forNobody, forHidden]);
-});
-
-void test("the waiting count holds unanswered decisions and unfinished owner tasks", () => {
-  const decision: DecisionView = { id: "D1", rev: 0, question: "Ship it?", options: [], isAnswerKept: false };
-  const ownerTask: OwnerTaskView = {
-    id: "O1",
-    rev: 0,
-    title: "Try it",
-    items: [],
-    isStartPressed: false,
-    isDone: false,
-  };
-  const counted = session("counted", {
-    decisions: [decision, { ...decision, id: "D2", answer: "Yes" }],
-    ownerTasks: [ownerTask, { ...ownerTask, id: "O2", isDone: true }],
-  });
-  assert.equal(waitingCount(counted), 2);
 });

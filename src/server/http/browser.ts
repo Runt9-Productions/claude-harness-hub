@@ -92,7 +92,8 @@ function failureDescription(error: unknown): string {
   const code = "code" in error ? String(error.code) : "";
   const parts = [identifierPattern.test(error.name) ? error.name : "an unnamed error"];
   if (identifierPattern.test(code)) parts.push(code);
-  const frames = (error.stack ?? "").split("\n").filter((line) => /^\s+at /.test(line));
+  const lines = (error.stack ?? "").split("\n");
+  const frames = lines.filter((line) => /^\s+at /.test(line));
   return [parts.join(" "), ...frames].join("\n");
 }
 
@@ -134,7 +135,8 @@ export function createBrowserHandler(config: BrowserHandlerConfig) {
     }
     if (route.kind === "page") return { status: 200, contentType: "text/html; charset=utf-8", body: config.page };
     if (route.kind === "snapshot") {
-      return { status: 200, contentType: "application/json", body: JSON.stringify(await config.snapshot()) };
+      const snapshot = await config.snapshot();
+      return { status: 200, contentType: "application/json", body: JSON.stringify(snapshot) };
     }
     return { status: 200, contentType: route.asset.contentType, body: await readFile(route.asset.file) };
   }

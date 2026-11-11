@@ -49,7 +49,7 @@ simplification can go back to the owner.
 - [invariant] The hub never substitutes a default of its own: a `SessionView` is built only from what validated, an
   absent store field reads as the board plugin itself reads it (a missing `rev` as 0), a session with no board entry
   has empty lists, and one whose entry failed validation has an entry in `errors` beside its empty lists, placed as
-  [[Hub Outside State]] says (`buildSnapshot`, `src/server/hub/snapshot.ts:187`)
+  [[Hub Outside State]] says (`buildSnapshot`, `src/server/hub/snapshot.ts:193`)
 
 ### Modules
 

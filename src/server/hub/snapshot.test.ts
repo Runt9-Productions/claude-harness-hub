@@ -80,6 +80,13 @@ void test("a session needs the owner for an unanswered decision, an unfinished o
   ]);
 });
 
+void test("the waiting count holds unanswered decisions and unfinished owner tasks", () => {
+  const snapshot = build([row("mixed", { pid: 1 })], {
+    mixed: boardWith([unansweredDecision, answeredDecision], [openOwnerTask, doneOwnerTask]),
+  });
+  assert.equal(snapshot.sessions[0]?.waitingCount, 2);
+});
+
 void test("only named fields reach the view: no agentId, and no note before a decision is answered", () => {
   const draftNote = { ...unansweredDecision, agentId: "worker", note: "an unsent draft" };
   const answeredBySubagent = {

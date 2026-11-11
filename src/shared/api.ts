@@ -15,9 +15,13 @@ export type SourceError = {
   message: string;
 };
 
-export type Delivery = "sending" | "sent" | "seen" | "failed";
+export const deliveries = ["sending", "sent", "seen", "failed"] as const;
 
-export type Mode = "present" | "distracted" | "away";
+export type Delivery = (typeof deliveries)[number];
+
+export const modes = ["present", "distracted", "away"] as const;
+
+export type Mode = (typeof modes)[number];
 
 export type Item = { label: string; isTicked: boolean };
 
@@ -81,6 +85,8 @@ export type SessionView = {
   ownerTasks: OwnerTaskView[];
   tasks: TaskView[];
   needsYou: boolean;
+  /** Unanswered decisions plus unfinished owner tasks. */
+  waitingCount: number;
   hasUnreadAnswers: boolean;
   canAnswer: boolean;
   canSetMode: boolean;

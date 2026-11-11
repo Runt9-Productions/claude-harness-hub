@@ -59,26 +59,28 @@ Read this before adding a view, a component or a colour to `src/web/`.
 
 - [fact] A card's parts, top to bottom: a head with a state dot, the name and the waiting count; a line of kind,
   state and mode; the working directory in `--mono`; "process stopped" with the `claude attach` command when no
-  process runs; the session's errors; the agent tasks (`Card`, `src/web/ui/dashboard.tsx:109`)
+  process runs; the session's errors; the agent tasks (`Card`, `src/web/ui/dashboard.tsx:110`)
 - [fact] A card for a session that needs the owner carries a 3px `--amber` bar on its left edge, drawn with an inset
   `box-shadow` so the content does not shift
 - [fact] The state dot is filled `--amber` when the session needs the owner, filled `--accent` while it works, and a
-  `--muted` ring otherwise (`sessionTone`, `src/web/ui/dashboard.tsx:31`)
+  `--muted` ring otherwise (`sessionTone`, `src/web/ui/dashboard.tsx:32`)
 - [fact] Agent tasks show a heading of done and blocked counts and at most 3 open tasks, blocked first, each with a
   dot, the title cut to one line and its progress; "Show N more" expands the card in place (`cardTasks`,
-  `src/web/logic/dashboard.ts:123`)
+  `src/web/logic/dashboard.ts:149`)
 - [invariant] Each card renders inside its own error boundary, so one bad session draws a failure line and the rest
   carry on (`CardBoundary`, `src/web/ui/dashboard.tsx:141`)
 
 ### Layout
 
-- [invariant] Cards are dealt left to right into columns of equal width by `dealIntoColumns`, so a tall card pushes
-  down only the cards beneath it; CSS columns or a grid would reflow every card when one grows
-  (`dealIntoColumns`, `src/web/logic/dashboard.ts:98`)
+- [invariant] Cards sit in columns of equal width, so a tall card pushes down only the cards beneath it; CSS columns
+  or a grid would reflow every card when one grows. A card keeps its column while it stays in its group, a card
+  entering a group takes the column with the fewest cards, the leftmost on a tie, and a new column count places every
+  card afresh, so a card joining or leaving moves no other card. Each column runs in the group's order
+  (`placeInColumns`, `src/web/logic/dashboard.ts:100`)
 - [invariant] Each column takes an equal share whether or not it holds a card, so one session shows one ordinary
   card a column wide, never stretched across the screen
 - [fact] The column count is set by the viewport width: at least one, and as many 400px columns with 16px gaps as fit
-  inside 32px of padding a side, which is 4 on a 1920px screen (`columnCount`, `src/web/logic/dashboard.ts:89`)
+  inside 32px of padding a side, which is 4 on a 1920px screen (`columnCount`, `src/web/logic/dashboard.ts:82`)
 - [fact] Both groups use the same column count, so their columns line up; an empty group draws nothing
 - [fact] Below 1000px wide the top bar and page padding drop to 16px a side and the top bar's end wraps
 

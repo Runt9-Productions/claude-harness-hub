@@ -2,7 +2,7 @@ import type { Stats } from "node:fs";
 import { lstat, readdir, readFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { z } from "zod";
-import type { SourceError } from "../../shared/api.ts";
+import { deliveries, modes, type Mode, type SourceError } from "../../shared/api.ts";
 import { issueMessage } from "./issues.ts";
 
 const boardFileName = /^board_.+\.json$/;
@@ -11,7 +11,7 @@ const parseGraceMilliseconds = 10_000;
 
 type StoreKind = "board" | "away";
 
-const deliverySchema = z.enum(["sending", "sent", "seen", "failed"]);
+const deliverySchema = z.enum(deliveries);
 
 const itemSchema = z.object({ label: z.string(), isTicked: z.boolean() });
 
@@ -70,12 +70,10 @@ const boardEntrySchema = z.object({
 });
 
 // `present` is never saved, since the away plugin deletes the key instead, but it is a mode the plugin reads back.
-const modeSchema = z.enum(["present", "distracted", "away"]);
+const modeSchema = z.enum(modes);
 
 /** One session's saved board, with bare-string options normalized and absent fields read as the board plugin reads them. */
 export type BoardEntry = z.output<typeof boardEntrySchema>;
-
-export type Mode = z.output<typeof modeSchema>;
 
 /** What the stores hold for one session; a field is absent when no file holds it or its entry failed validation. */
 export type SessionStores = { board?: BoardEntry; mode?: Mode };
@@ -133,7 +131,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 async function parseStoreFile(path: string): Promise<Record<string, unknown> | undefined> {
   try {
-    const parsed: unknown = JSON.parse(await readFile(path, "utf8"));
+    const text = await readFile(path, "utf8");
+    const parsed: unknown = JSON.parse(text);
     return isRecord(parsed) ? parsed : undefined;
   } catch {
     // Writes are not known to be atomic, so a half-written file is retried before it counts as an error.
@@ -250,7 +249,10 @@ export function createStoreSource(configDir: string): StoreSource {
   async function read(sessionIds: readonly string[], now: number): Promise<StoreRead> {
     const errors = await readFiles(now);
     const sessions = new Map<string, SessionStores>();
-    for (const sessionId of sessionIds) sessions.set(sessionId, lookUp(sessionId, errors));
+    for (const sessionId of sessionIds) {
+      const sessionStores = lookUp(sessionId, errors);
+      sessions.set(sessionId, sessionStores);
+    }
     return { sessions, errors };
   }
 

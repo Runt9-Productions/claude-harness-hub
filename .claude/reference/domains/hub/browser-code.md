@@ -47,7 +47,7 @@ build.
 - [trap] `tsc` emits even when it reports errors, so `npm start` runs `tsc -p src/web/tsconfig.json && node
   src/server/main.ts` and a type error stops the start #silent-failure
 - [invariant] `main.ts` builds paths from `import.meta.url`, never the working directory (`runFromCommandLine`,
-  `src/server/main.ts:116`)
+  `src/server/main.ts:122`)
 - [invariant] Preact is served from the installed package as three files: `dist/preact.mjs`, `hooks/dist/hooks.mjs`
   and `jsx-runtime/dist/jsxRuntime.mjs`. Emitted code and Preact's own files import the bare name `preact`, which
   the page's inline import map resolves. The map is built from the same list as the `/vendor/` URLs (`importMap`,
@@ -83,7 +83,14 @@ build.
   session keys that no connection event changes, so a card keeps its expansion when it moves between groups and
   remounts (`pageReducer`, `src/web/logic/page-state.ts:22`)
 - [fact] The viewport width is read in `ui` through a `resize` listener and passed to `columnCount` in `logic`, not
-  kept in the reducer, since `logic` may not touch `window` (`useViewportWidth`, `src/web/ui/dashboard.tsx:15`)
+  kept in the reducer, since `logic` may not touch `window` (`useViewportWidth`, `src/web/ui/dashboard.tsx:16`)
+- [fact] Each group's column placement is kept outside the reducer too, in `useState` inside its `Group`. Each
+  render places the cards against the held placement with `placeInColumns` and sets the state, during render, only
+  when the placement changed, so the extra render it causes places the same way and stops. A ref written during render
+  or in an effect fails oxlint's `react(immutability)` rule (`useHeldColumns`, `src/web/ui/dashboard.tsx:171`)
+- [fact] A `Group` stays mounted while its group is empty, so it keeps its state; with no sessions at all the
+  dashboard draws its empty line instead and both `Group`s unmount, which loses nothing, since no card is left to
+  hold a column
 - [invariant] A command stays in flight until a snapshot contains its id, because a snapshot requested before the
   `POST` can arrive after the `202` #order-dependent
 - [invariant] List keys are stable and composite, `<session key>/<kind>/<itemId>`, since item ids restart in each
@@ -102,8 +109,9 @@ build.
 - [invariant] The dashboard sorts by needs-you, then `startedAt`, never by status; this is a pure function in `logic`
   (`groupSessions`, `src/web/logic/dashboard.ts:13`), and the hub sends sessions in the CLI's order
 - [fact] The dashboard does not hold slots under the pointer: a card moves between groups on the next snapshot even
-  while the pointer is on it, and a session that leaves shifts the cards after it. Its only control, Show more, sends
-  nothing, so the waiting list is the first view that needs the rule
+  while the pointer is on it, and a session that leaves closes the gap beneath it in its own column. No other card
+  changes column (`placeInColumns`, `src/web/logic/dashboard.ts:100`). Its only control, Show more, sends nothing, so
+  the waiting list is the first view that needs the rule
 
 ### Errors, CSS and what Preact does differently
 

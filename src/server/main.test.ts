@@ -5,12 +5,12 @@ import { once } from "node:events";
 import { cp, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { createServer, request, type IncomingHttpHeaders, type Server } from "node:http";
 import { connect } from "node:net";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
 import { test, type TestContext } from "node:test";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
-import { start, type RunningHub } from "./main.ts";
+import { configDirFromEnvironment, start, type RunningHub } from "./main.ts";
 
 type Reply = { status: number; headers: IncomingHttpHeaders; body: string };
 
@@ -262,6 +262,7 @@ void test("each snapshot request reads the session list and the stores under the
       { id: "T3", title: "Read the old parser", status: "done", items: [] },
     ],
     needsYou: true,
+    waitingCount: 2,
     hasUnreadAnswers: true,
     canAnswer: false,
     canSetMode: false,
@@ -415,4 +416,22 @@ void test("the command line refuses to start when stdout is not a terminal", asy
     assert.match(error.stderr, /stdout is not a terminal/);
     return true;
   });
+});
+
+void test("the command line refuses a bad --port with a one-line reason", async () => {
+  const mainPath = fileURLToPath(new URL("main.ts", import.meta.url));
+  const run = promisify(execFile)(process.execPath, [mainPath, "--port", "70000"], { timeout: 5000 });
+  await assert.rejects(run, (error: { code: number; stderr: string }) => {
+    assert.equal(error.code, 1);
+    assert.equal(error.stderr, "hub: --port 70000 is not a port number from 1 to 65535; not starting\n");
+    return true;
+  });
+});
+
+void test("the config dir is $CLAUDE_CONFIG_DIR, else ~/.claude, and a relative or empty one is refused", () => {
+  assert.equal(configDirFromEnvironment({}), join(homedir(), ".claude"));
+  assert.equal(configDirFromEnvironment({ CLAUDE_CONFIG_DIR: "/srv/example/config" }), "/srv/example/config");
+  for (const configured of ["example/config", ""]) {
+    assert.throws(() => configDirFromEnvironment({ CLAUDE_CONFIG_DIR: configured }), /not an absolute path/);
+  }
 });

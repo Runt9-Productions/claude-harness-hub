@@ -13,6 +13,7 @@ sources:
   - "src/web/logic/poll.ts"
   - "src/web/logic/connection.ts"
   - "src/web/logic/snapshot.ts"
+  - "src/server/sources/stores.ts"
 measured_on: "Chrome 157, Node 26.13.0, on Linux under WSL2"
 ---
 
@@ -71,13 +72,13 @@ header.
   exact `Origin`, `Content-Type: application/json`, a 64 KiB body cap, then the schema #order-dependent
 - [fact] As built, a wrong `Host` answers 421, an unknown path 404 whatever the method, a method other than `GET` on
   a known path 405 with `Allow: GET`, and a missing or wrong token 401 with `WWW-Authenticate: Bearer`, in that order.
-  No route accepts a `POST` yet (`reply`, `src/server/http/browser.ts:126`)
+  No route accepts a `POST` yet (`reply`, `src/server/http/browser.ts:127`)
 - [invariant] The route is matched on the raw path before `?`, never a normalised one, so only a path spelled exactly
   as a route matches it
 - [fact] `curl.exe` on the Windows side reached a server bound to `127.0.0.1` in WSL2 and sent
   `Host: 127.0.0.1:<port>` #measured (2026-11-08)
 - [invariant] A throw in a handler, or a rejected snapshot, is caught per request and answers 500
-  (`handleBrowserRequest`, `src/server/http/browser.ts:142`)
+  (`handleBrowserRequest`, `src/server/http/browser.ts:144`)
 - [invariant] Logs and error messages name fields, never board text or other values
 - [fact] The 500 log holds the matched route's fixed path, else "an unrouted path", the error's `name` and `code`,
   each only when it is a plain identifier, and the stack's `at` lines, never the message or the stack's opening
@@ -129,7 +130,7 @@ type SessionView = {
   mode?: 'present' | 'distracted' | 'away'; sandboxProblem?: string
   decisions: DecisionView[]; ownerTasks: OwnerTaskView[]; tasks: TaskView[]
   activity?: ActivityView[]; contextPercent?: number
-  needsYou: boolean; hasUnreadAnswers: boolean; canAnswer: boolean; canSetMode: boolean
+  needsYou: boolean; waitingCount: number; hasUnreadAnswers: boolean; canAnswer: boolean; canSetMode: boolean
 }
 type DecisionView = {
   id: string; rev: number; createdAt?: number
@@ -159,12 +160,16 @@ type CommandView = {
 
 - [fact] As built, `Snapshot` holds `runId`, `now`, `sessions` and `errors`, and `SessionView` holds every field
   above except `sandboxProblem`, `activity` and `contextPercent`; `commands`, `usage` and those three are design
-  (`SessionView`, `src/shared/api.ts:64`)
-- [invariant] `needsYou` is decided by the hub, so the browser groups cards without knowing the rule; the rule is in
-  [[Hub Outside State]]
+  (`SessionView`, `src/shared/api.ts:68`)
+- [invariant] `needsYou` and `waitingCount` are decided by the hub, so the browser groups and counts cards without
+  knowing the rule; the rule is in [[Hub Outside State]]
+- [invariant] The delivery and mode values are listed once, as `deliveries` and `modes` in `src/shared/api.ts`, and
+  the types, the store schemas and the page's reader are all built from them. The page's reader throws on a value it
+  does not list, which fails every poll, so a second copy that missed a value would take the whole page down
+  (`deliveries`, `src/shared/api.ts:18`)
 - [invariant] `runId` is constant for a run; when it changes the page reloads to get the new code. It is read and
   compared before the rest of the body is narrowed, since a restarted hub may serve a shape the old page rejects
-  (`readRunSnapshot`, `src/web/logic/snapshot.ts:173`)
+  (`readRunSnapshot`, `src/web/logic/snapshot.ts:174`)
 - [invariant] The page narrows the body by hand, field by field: only named fields are copied, an absent optional
   field stays absent rather than `undefined`, and a value that does not fit throws naming its path, such as
   `snapshot field sessions entry 0 field mode` (`objectOf`, `src/web/logic/snapshot.ts:58`)

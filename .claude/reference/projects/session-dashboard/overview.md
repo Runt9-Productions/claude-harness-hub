@@ -15,7 +15,7 @@ first. It ends when that pull request merges.
 
 ## Where it stands
 
-- [status] Spec written; the build has not started
+- [status] Built, verified in a browser and in review on #26
 
 ## Documents
 

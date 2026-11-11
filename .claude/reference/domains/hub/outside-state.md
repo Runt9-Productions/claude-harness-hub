@@ -45,54 +45,61 @@ Read this before touching `src/server/sources/`, the snapshot builder in `src/se
 ### The session list
 
 - [invariant] `execFile('claude', ['agents', '--json', '--all'])` with a 5 second timeout, `killSignal: 'SIGKILL'`,
-  the home directory as its working directory, and one call in flight. A child that ignores the default signal
-  otherwise holds the callback past the timeout (`runList`, `src/server/sources/agents.ts:117`)
+  a 64 MiB output limit, the home directory as its working directory, and one call in flight. A child that ignores
+  the default signal otherwise holds the callback past the timeout, and output past Node's default 1 MiB limit fails
+  the whole call (`runList`, `src/server/sources/agents.ts:130`)
 - [invariant] A call starts at most every 3 seconds of `now`, and a request waits for it only while no list has been
   read yet; otherwise it answers with the last list at once and the refresh shows on a later request. A failed call
   keeps the last list and its row errors, plus one call error that the next good call clears (`read`,
-  `src/server/sources/agents.ts:166`)
+  `src/server/sources/agents.ts:189`)
 - [fact] A `now` earlier than the last start counts as due, so a clock set back cannot freeze the list (`isDue`,
-  `src/server/sources/agents.ts:139`)
-- [invariant] Every `PATH` entry ending in `/node_modules/.bin` is removed from the child's `PATH`, because npm adds
-  one per ancestor directory and a package's `bin` could otherwise supply `claude` (`childPath`,
-  `src/server/sources/agents.ts:100`)
+  `src/server/sources/agents.ts:162`)
+- [invariant] Every relative `PATH` entry, and every entry ending in `/node_modules/.bin` with or without trailing
+  slashes, is removed from the child's `PATH`. npm adds one per ancestor directory, so a package's `bin` could
+  otherwise supply `claude`, and a relative entry would resolve against the fixed working directory (`childPath`,
+  `src/server/sources/agents.ts:112`)
 - [invariant] A call error is built from the exit code, error code or signal only, never from `execFile`'s own
-  message, which embeds stderr (`callFailureMessage`, `src/server/sources/agents.ts:108`)
+  message, which embeds stderr. A child ended by a signal has a `code` of null, so only a string `code` is named as
+  one (`callFailureMessage`, `src/server/sources/agents.ts:120`)
 - [fact] Each row is parsed on its own and needs only `cwd`, `kind` and `startedAt`. A row that fails is dropped with
-  `row <n>: <field path>: <message>` and no `sessionId`, the other rows carry on, and fields the schema does not name
-  are stripped (`rowSchema`, `src/server/sources/agents.ts:23`)
+  an error whose `sessionId` is the row's string `sessionId`, else its string `id`, and whose message is
+  `<field path>: <message>`; a row with neither gets no `sessionId` and the message `row <n>: <field path>:
+  <message>` (`droppedRowError`, `src/server/sources/agents.ts:72`). The other rows carry on, and fields the schema
+  does not name are stripped (`rowSchema`, `src/server/sources/agents.ts:25`)
 - [invariant] An unknown `kind`, `status`, `state` or `waitingFor` value keeps its raw text and adds
   `unknown <field> value` with the row's key as `sessionId`, and the rest of that session still builds, because the
   CLI updates itself. The known values are listed only in `agents.ts` (`knownValues`,
-  `src/server/sources/agents.ts:15`)
+  `src/server/sources/agents.ts:17`)
 - [invariant] A session's key is `sessionId`, else `id`, and a row with neither is dropped with an error. Commands
-  need a `sessionId` (`buildSnapshot`, `src/server/hub/snapshot.ts:187`)
+  need a `sessionId` (`buildSnapshot`, `src/server/hub/snapshot.ts:193`)
 - [invariant] Which rows show: a row with a `pid` always shows. A row with no `pid` shows when `state` is `working`
   or `blocked`, or when `state` is `done`, `failed` or `stopped` and its board entry holds an unanswered decision or
   an unfinished owner task; with no `state` it is hidden. Otherwise a background session that ended its turn with a
   decision pending leaves the queue when its process is stopped, and the queue reads empty while work waits
-  #silent-failure (`isShown`, `src/server/hub/snapshot.ts:69`)
+  #silent-failure (`isShown`, `src/server/hub/snapshot.ts:74`)
 - [trap] The stores are looked up by full `sessionId` only, so a row with only a short `id` gets no board, no mode
   and no store error, and with no `pid` and an ended `state` it is hidden whatever its board holds (`storedSession`,
-  `src/server/hub/snapshot.ts:178`)
+  `src/server/hub/snapshot.ts:184`)
 - [trap] A board entry that fails validation counts as no owner work as well, so a stopped session whose entry fails
   is hidden, and its store error, with no card to go on, shows under the top bar (`placeErrors`,
   `src/web/logic/dashboard.ts:63`)
 - [invariant] A row with no `pid` is read-only. Its card says "process stopped: `claude attach <id>` wakes it" with
-  the short `id`, or only "process stopped" when it has none (`Card`, `src/web/ui/dashboard.tsx:109`); once awake its
+  the short `id`, or only "process stopped" when it has none (`Card`, `src/web/ui/dashboard.tsx:110`); once awake its
   `hub` plugin reconnects. A Wake button (`claude respawn <id>`) waits for real use to ask for it
 - [invariant] A session needs the owner when it has an unanswered decision, an unfinished owner task,
   `status: waiting` or `state: blocked`. The hub sets this as `needsYou` on each `SessionView` (`needsYou`,
-  `src/server/hub/snapshot.ts:76`). `waitingFor` says what holds it, and the report's `permissionTool` will name the
+  `src/server/hub/snapshot.ts:81`), and sends the card's count of unanswered decisions plus unfinished owner tasks as
+  `waitingCount`, from the same two predicates, so the browser holds no copy of the rule (`waitingCount`,
+  `src/server/hub/snapshot.ts:63`). `waitingFor` says what holds it, and the report's `permissionTool` will name the
   tool when there is one
 
 ### Stores
 
 - [invariant] Config dir is `$CLAUDE_CONFIG_DIR` when set, otherwise `~/.claude`. A relative `$CLAUDE_CONFIG_DIR`,
-  the empty string included, refuses to start (`configDirFromEnvironment`, `src/server/main.ts:109`)
+  the empty string included, refuses to start (`configDirFromEnvironment`, `src/server/main.ts:110`)
 - [invariant] Each request lists `<config dir>/plugins/store/`, keeps names matching `^board_.+\.json$` or
   `^away_.+\.json$`, `lstat`s each, and parses a file again only when its modified time or size changed or its last
-  parse failed. A missing directory is no stores and no error (`readFiles`, `src/server/sources/stores.ts:199`)
+  parse failed. A missing directory is no stores and no error (`readFiles`, `src/server/sources/stores.ts:198`)
 - [invariant] A matching name that is not a regular file, such as a symlink or a directory, is an error and is never
   read, so a link cannot lead out of the store directory
 - [fact] A marketplace install and a `--plugin-dir` copy write different store files with the same fields, and the
@@ -100,7 +107,7 @@ Read this before touching `src/server/sources/`, the snapshot builder in `src/se
 - [invariant] So every matching file is read and each listed session id is looked up across them as `session:<id>`.
   When several hold an id, the board entry with the highest `savedAt` wins, one without `savedAt` ranking 0 as the
   board plugin's pruning ranks it, and for away the most recently modified file holding the key wins. A tie goes to
-  the first file in name order (`lookUp`, `src/server/sources/stores.ts:228`)
+  the first file in name order (`lookUp`, `src/server/sources/stores.ts:227`)
 - [invariant] Only the winning entry of a listed session is validated, so neither an unlisted session's old shape nor
   a losing older copy raises anything
 - [invariant] The schemas are `z.object`, so they check the fields the hub uses and strip the rest. A missing
@@ -113,7 +120,7 @@ Read this before touching `src/server/sources/`, the snapshot builder in `src/se
   still reads those
 - [invariant] Store writes are not proven atomic, so a file that fails to read or to parse as a JSON object keeps its
   last good copy and is retried on each request. It becomes an error with no `sessionId` once it has failed for 10
-  seconds of `now`, and the error clears when it parses (`refreshFile`, `src/server/sources/stores.ts:187`)
+  seconds of `now`, and the error clears when it parses (`refreshFile`, `src/server/sources/stores.ts:186`)
 - [fact] A file first seen half-written has no good copy, so for up to 10 seconds its sessions show no board and no
   error
 - [fact] Both board stores held the full 20 entries, so the board plugin's pruning to the newest 20 does happen
@@ -158,19 +165,19 @@ Renaming or removing one is a change to this contract. The hub's schemas are in 
 - [invariant] `hub` copies named fields into the snapshot. `toolUseIds`, `lastChange.message`, `agentId`, `savedAt`
   and anything unnamed never reach the browser, and a decision's `note`, `chosenOption` and `delivery` are copied
   only once `answer` is present, since the board keeps the owner's unsent note draft in `note` (`decisionView`,
-  `src/server/hub/snapshot.ts:105`)
+  `src/server/hub/snapshot.ts:110`)
 - [invariant] `hasUnreadAnswers` is a decision with no `agentId` and `delivery: 'sent'`, or an owner task with no
   `agentId` and `lastChange.delivery: 'sent'`, the board plugin's own test for an answer the main session has not
-  read (`hasUnreadAnswers`, `src/server/hub/snapshot.ts:91`; `isAnswerForMain`, `board/hooks/decisions.ts:377`)
+  read (`hasUnreadAnswers`, `src/server/hub/snapshot.ts:96`; `isAnswerForMain`, `board/hooks/decisions.ts:377`)
 - [fact] `canAnswer` and `canSetMode` are false for every session, since no `hub` plugin connects yet
-  (`sessionView`, `src/server/hub/snapshot.ts:152`)
+  (`sessionView`, `src/server/hub/snapshot.ts:157`)
 - [invariant] Mode: the `hub` plugin's report wins; without one, the away store's value; with neither, `mode` is
   absent, because the session is either present or has no `away` plugin and the hub cannot tell. The view draws an
-  absent mode as present (`StateLine`, `src/web/ui/dashboard.tsx:41`)
+  absent mode as present (`StateLine`, `src/web/ui/dashboard.tsx:42`)
 - [fact] `errors` holds the list's, then the stores', then the builder's own, and is not filtered to the sessions
   shown. The browser puts an error on the card whose `key` equals its `sessionId`, and any other under the top bar
 - [trap] `buildSnapshot` throws when the store read has no entry for a listed `sessionId`, which the store source
-  always returns, so that request answers 500 (`storedSession`, `src/server/hub/snapshot.ts:178`)
+  always returns, so that request answers 500 (`storedSession`, `src/server/hub/snapshot.ts:184`)
 - [invariant] Waiting items sort by `createdAt`; an item without one sorts by its session's start, then its number
 - [invariant] Plan usage: each session reports the windows from its last model response, so a reading can outlive
   its window. Per `kind`, drop readings whose `resetsAt` has passed, then take the latest `resetsAt`, then the highest

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { chmod, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
-import { delimiter, join } from "node:path";
+import { delimiter, join, relative } from "node:path";
 import { test, type TestContext } from "node:test";
 import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
@@ -64,12 +64,17 @@ async function readUntil(
   throw new Error(`no read at ${now} gave the wanted list`);
 }
 
-void test("reads the fixture list from the stub claude, passing over one under node_modules/.bin", async (t) => {
+void test("reads the fixture list from the stub claude, passing over relative entries and node_modules/.bin ones", async (t) => {
   const directory = await makeDirectory(t);
   const decoyBin = join(directory, "node_modules", ".bin");
-  await mkdir(decoyBin, { recursive: true });
-  await writeScript(join(decoyBin, "claude"), printing([]));
-  putFirstOnPath(t, [decoyBin, fixtureBin]);
+  const relativeDecoy = join(directory, "relative");
+  for (const decoy of [decoyBin, relativeDecoy]) {
+    await mkdir(decoy, { recursive: true });
+    await writeScript(join(decoy, "claude"), printing([]));
+  }
+  // claude runs from the home directory, so this relative entry would reach the decoy if it were kept.
+  const relativeEntry = relative(homedir(), relativeDecoy);
+  putFirstOnPath(t, [relativeEntry, `${decoyBin}/`, decoyBin, fixtureBin]);
   const expectedRows: unknown = JSON.parse(await readFile(fixtureList, "utf8"));
 
   const list = await createSessionListSource().read(0);
@@ -157,6 +162,29 @@ void test(
     assert.deepEqual(recovered, { rows: [renamed], errors: [] });
   },
 );
+
+void test("a claude missing from PATH is an error saying so", async (t) => {
+  const emptyDirectory = await makeDirectory(t);
+  const originalPath = process.env["PATH"];
+  process.env["PATH"] = emptyDirectory;
+  t.after(() => {
+    process.env["PATH"] = originalPath;
+  });
+
+  assert.deepEqual(await createSessionListSource().read(0), {
+    rows: [],
+    errors: [{ source: "claude agents", message: "claude was not found on PATH" }],
+  });
+});
+
+void test("a claude ended by a signal is an error naming the signal", async (t) => {
+  await stubClaude(t, "kill -TERM $$");
+
+  assert.deepEqual(await createSessionListSource().read(0), {
+    rows: [],
+    errors: [{ source: "claude agents", message: "claude agents --json --all was ended by SIGTERM" }],
+  });
+});
 
 void test("a clock set back counts as due, so the list still refreshes", async (t) => {
   const stub = await stubClaude(t, printing([goodRow]));

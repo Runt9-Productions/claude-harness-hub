@@ -1,13 +1,13 @@
-import type {
-  DecisionView,
-  Delivery,
-  Item,
-  Mode,
-  OwnerTaskView,
-  SessionView,
-  Snapshot,
-  SourceError,
-  TaskView,
+import {
+  deliveries,
+  modes,
+  type DecisionView,
+  type Item,
+  type OwnerTaskView,
+  type SessionView,
+  type Snapshot,
+  type SourceError,
+  type TaskView,
 } from "../../shared/api.ts";
 
 /** Narrows `value` or throws naming `where`, the path to the value, such as `snapshot field sessions entry 0`. */
@@ -24,20 +24,20 @@ function isJsonObject(value: unknown): value is Record<string, unknown> {
   return !Array.isArray(value);
 }
 
-const string: Narrow<string> = (value, where) => {
+function string(value: unknown, where: string): string {
   if (typeof value !== "string") throw new Error(`${where} is not a string`);
   return value;
-};
+}
 
-const number: Narrow<number> = (value, where) => {
+function number(value: unknown, where: string): number {
   if (typeof value !== "number") throw new Error(`${where} is not a number`);
   return value;
-};
+}
 
-const boolean: Narrow<boolean> = (value, where) => {
+function boolean(value: unknown, where: string): boolean {
   if (typeof value !== "boolean") throw new Error(`${where} is not a boolean`);
   return value;
-};
+}
 
 function oneOf<T extends string>(values: readonly T[]): Narrow<T> {
   return (value, where) => {
@@ -72,8 +72,8 @@ function objectOf<T>(build: (fields: Fields) => T): Narrow<T> {
   };
 }
 
-const delivery = oneOf<Delivery>(["sending", "sent", "seen", "failed"]);
-const mode = oneOf<Mode>(["present", "distracted", "away"]);
+const delivery = oneOf(deliveries);
+const mode = oneOf(modes);
 
 const item = objectOf<Item>((fields) => ({
   label: fields.required("label", string),
@@ -146,6 +146,7 @@ const session = objectOf<SessionView>((fields) => ({
   ownerTasks: fields.required("ownerTasks", listOf(ownerTask)),
   tasks: fields.required("tasks", listOf(task)),
   needsYou: fields.required("needsYou", boolean),
+  waitingCount: fields.required("waitingCount", number),
   hasUnreadAnswers: fields.required("hasUnreadAnswers", boolean),
   canAnswer: fields.required("canAnswer", boolean),
   canSetMode: fields.required("canSetMode", boolean),

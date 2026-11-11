@@ -1,6 +1,6 @@
 import { execFile, type ExecFileException } from "node:child_process";
 import { homedir } from "node:os";
-import { delimiter } from "node:path";
+import { delimiter, isAbsolute } from "node:path";
 import { z } from "zod";
 import type { SourceError } from "../../shared/api.ts";
 import { issueMessage } from "./issues.ts";
@@ -8,6 +8,8 @@ import { issueMessage } from "./issues.ts";
 const source = "claude agents";
 const commandArguments = ["agents", "--json", "--all"] as const;
 const timeoutMilliseconds = 5000;
+// Node's default of 1 MiB fails the whole call; `--all` keeps every completed background session in the list.
+const maxOutputBytes = 64 * 1024 * 1024;
 const refreshIntervalMilliseconds = 3000;
 
 type CheckedField = "kind" | "status" | "state" | "waitingFor";
@@ -87,20 +89,30 @@ function parseList(stdout: string): ParsedList {
   for (const [index, candidate] of parsed.entries()) {
     const result = rowSchema.safeParse(candidate);
     if (!result.success) {
-      rowErrors.push(droppedRowError(index, candidate, result.error.issues));
+      const dropped = droppedRowError(index, candidate, result.error.issues);
+      rowErrors.push(dropped);
       continue;
     }
     rows.push(result.data);
-    rowErrors.push(...unknownValueErrors(result.data));
+    const unknownValues = unknownValueErrors(result.data);
+    rowErrors.push(...unknownValues);
   }
   return { rows, rowErrors };
 }
 
-// npm puts a `node_modules/.bin` on PATH for every ancestor directory, so a package's `bin` could stand in for `claude`.
+const packageBinDirectory = /\/node_modules\/\.bin\/*$/;
+
+// npm puts a `node_modules/.bin` on PATH for every ancestor directory, so a package's `bin` could stand in for
+// `claude`. A relative entry would resolve against the child's fixed working directory, not anywhere the user meant.
+function isKeptPathEntry(entry: string): boolean {
+  if (!isAbsolute(entry)) return false;
+  return !packageBinDirectory.test(entry);
+}
+
 function childPath(path: string | undefined): string | undefined {
   if (path === undefined) return undefined;
   const entries = path.split(delimiter);
-  const kept = entries.filter((entry) => !entry.endsWith("/node_modules/.bin"));
+  const kept = entries.filter(isKeptPathEntry);
   return kept.join(delimiter);
 }
 
@@ -110,18 +122,29 @@ function callFailureMessage(error: ExecFileException): string {
   if (error.killed === true) return `${command} timed out after ${timeoutMilliseconds} ms`;
   if (error.code === "ENOENT") return "claude was not found on PATH";
   if (typeof error.code === "number") return `${command} exited with code ${error.code}`;
-  if (error.code !== undefined) return `${command} failed with ${error.code}`;
+  // A child ended by a signal has a `code` of null.
+  if (typeof error.code === "string") return `${command} failed with ${error.code}`;
   return `${command} was ended by ${error.signal ?? "an unnamed signal"}`;
 }
 
 function runList(): Promise<string> {
   const env = { ...process.env, PATH: childPath(process.env["PATH"]) };
-  const options = { timeout: timeoutMilliseconds, killSignal: "SIGKILL" as const, cwd: homedir(), env };
+  const options = {
+    timeout: timeoutMilliseconds,
+    killSignal: "SIGKILL" as const,
+    maxBuffer: maxOutputBytes,
+    cwd: homedir(),
+    env,
+  };
   return new Promise((resolve, reject) => {
     // SIGKILL, because a child that ignores the default SIGTERM keeps the callback waiting past the timeout.
     execFile("claude", commandArguments, options, (error, stdout) => {
-      if (error === null) resolve(stdout);
-      else reject(new Error(callFailureMessage(error)));
+      if (error === null) {
+        resolve(stdout);
+        return;
+      }
+      const message = callFailureMessage(error);
+      reject(new Error(message));
     });
   });
 }

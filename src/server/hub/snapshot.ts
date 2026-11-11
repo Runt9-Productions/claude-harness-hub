@@ -60,9 +60,14 @@ function isUnfinished(ownerTask: StoredOwnerTask): boolean {
   return !ownerTask.isDone;
 }
 
+function waitingCount(board: StoredBoard): number {
+  const unanswered = board.decisions.filter(isUnanswered);
+  const unfinished = board.ownerTasks.filter(isUnfinished);
+  return unanswered.length + unfinished.length;
+}
+
 function holdsOwnerWork(board: StoredBoard): boolean {
-  if (board.decisions.some(isUnanswered)) return true;
-  return board.ownerTasks.some(isUnfinished);
+  return waitingCount(board) > 0;
 }
 
 // Without the last rule, a stopped session's pending decision would leave the dashboard while it still waits.
@@ -160,6 +165,7 @@ function sessionView(key: string, row: ListedSession, stored: StoredSession, boa
     ownerTasks: board.ownerTasks.map(ownerTaskView),
     tasks: board.tasks.map(taskView),
     needsYou: needsYou(row, board),
+    waitingCount: waitingCount(board),
     hasUnreadAnswers: hasUnreadAnswers(board),
     // No `hub` plugin connects yet, so nothing can reach a session.
     canAnswer: false,

@@ -106,29 +106,42 @@ function isAddressInUse(error: unknown): boolean {
   return error instanceof Error && "code" in error && error.code === "EADDRINUSE";
 }
 
-function configDirFromEnvironment(): string {
-  const configured = process.env["CLAUDE_CONFIG_DIR"];
+/** `$CLAUDE_CONFIG_DIR`, else `~/.claude`; throws when `$CLAUDE_CONFIG_DIR` is set but not an absolute path. */
+export function configDirFromEnvironment(environment: NodeJS.ProcessEnv): string {
+  const configured = environment["CLAUDE_CONFIG_DIR"];
   if (configured === undefined) return join(homedir(), ".claude");
   if (!isAbsolute(configured)) throw new Error("CLAUDE_CONFIG_DIR is not an absolute path");
   return configured;
 }
 
+function refuseToStart(reason: string): void {
+  console.error(`hub: ${reason}; not starting`);
+  process.exitCode = 1;
+}
+
 async function runFromCommandLine(): Promise<void> {
-  if (!process.stdout.isTTY) {
-    console.error("hub: stdout is not a terminal, and the launch link is printed only to one; not starting");
-    process.exitCode = 1;
+  const { values } = parseArgs({ options: { port: { type: "string" } } });
+  let port: number;
+  let configDir: string;
+  try {
+    port = parsePort(values.port);
+    configDir = configDirFromEnvironment(process.env);
+  } catch (error: unknown) {
+    if (!(error instanceof Error)) throw error;
+    refuseToStart(error.message);
     return;
   }
-  const { values } = parseArgs({ options: { port: { type: "string" } } });
-  const port = parsePort(values.port);
+  if (!process.stdout.isTTY) {
+    refuseToStart("stdout is not a terminal, and the launch link is printed only to one");
+    return;
+  }
   const assetRoot = fileURLToPath(new URL("../../", import.meta.url));
   let hub: RunningHub;
   try {
-    hub = await start({ port, assetRoot, configDir: configDirFromEnvironment() });
+    hub = await start({ port, assetRoot, configDir });
   } catch (error: unknown) {
     if (!isAddressInUse(error)) throw error;
-    console.error(`hub: port ${port} is busy; not starting`);
-    process.exitCode = 1;
+    refuseToStart(`port ${port} is busy`);
     return;
   }
   console.log(launchLink(hub.port, hub.token));

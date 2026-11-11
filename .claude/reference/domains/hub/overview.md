@@ -11,18 +11,22 @@ sources:
   - "src/e2e/tsconfig.json"
   - ".oxlintrc.json"
   - ".github/workflows/ci.yml"
-measured_on: "Node 26.13.0, TypeScript 7.0.2, oxlint 1.90.0 (versions not recorded for the 2026-11-08 lines)"
+  - "src/server/hub/snapshot.ts"
+  - "src/server/sources/stores.ts"
+  - "src/server/main.ts"
+measured_on: "Node 26.13.0, TypeScript 7.0.2, zod 4.6.7, oxlint 1.90.0 (versions not recorded for the 2026-11-08 lines)"
 ---
 
 # Hub Architecture
 
 > **Scope.** The hub's shape, its modules and the rules between them, as agreed with the owner on 2026-11-08 and
 > 2026-11-09, before any hub code existed; `tsconfig.json` and the `tests` job of `.github/workflows/ci.yml` were read
-> for the lines that cite them. On 2026-11-11, with the first slice built, the import rule and TypeScript project
-> lines were checked against the three `tsconfig.json` files and `.oxlintrc.json`, with the other lines carried
-> forward unchecked. The two measured lines were taken on 2026-11-08 while designing and were not re-run
-> for this note. Not covered: the other areas, which have their own notes linked below, and the `hub` plugin's own
-> code, which lives in runt9-claude-harness.
+> for the lines that cite them. On #24 the import rule and TypeScript project lines were checked against the three
+> `tsconfig.json` files and `.oxlintrc.json`. On #PRNUM the no-default line, the structural input types and the
+> schema lines were checked against the snapshot builder, the store source and `main.ts`, and `tsc -p tsconfig.json`
+> was run; the #24 lines and the rest were carried forward without a re-check. The two 2026-11-08 measured lines were
+> not re-run for this note. Not covered: the other areas, which have their own notes linked below, and the `hub`
+> plugin's own code, which lives in runt9-claude-harness.
 
 Read this before creating or moving a file under `src/`, adding an import between modules, or adding a schema. Lines
 other than `[decision]` lines are the agent-written design the owner agreed as a whole, so a rule that blocks a
@@ -42,9 +46,10 @@ simplification can go back to the owner.
 - [invariant] Targets are Linux, WSL2 and macOS for the hub, and current Chrome or Edge for the page
 - [decision] The hub reads saved boards from the store files, and the plugin sends only live data, because a
   stopped session has no process to report (owner, 2026-11-08)
-- [invariant] The hub never substitutes a default: a `SessionView` is built only from what validated, a session
-  with no board entry has empty lists, and one whose entry failed validation has an entry in `errors` that the view
-  shows instead of an empty board
+- [invariant] The hub never substitutes a default of its own: a `SessionView` is built only from what validated, an
+  absent store field reads as the board plugin itself reads it (a missing `rev` as 0), a session with no board entry
+  has empty lists, and one whose entry failed validation has an entry in `errors` beside its empty lists, placed as
+  [[Hub Outside State]] says (`buildSnapshot`, `src/server/hub/snapshot.ts:187`)
 
 ### Modules
 
@@ -67,6 +72,9 @@ simplification can go back to the owner.
   `no-restricted-globals` bars `document` and `window` in `src/web/logic`. Test files are left out of every override
 - [trap] An override's patterns follow gitignore rules, where `*` stops at `/`: `!node:*` allows `node:os` but not
   `node:fs/promises`, which needs `!node:*/**` beside it #measured (2026-11-11)
+- [invariant] `src/server/hub` cannot import the sources' types, so the snapshot builder declares the shapes it takes
+  structurally (`ListedSession`, `StoredSession`), and `main.ts` passing the sources' output straight in is where
+  `tsc` checks that they still fit (`src/server/hub/snapshot.ts:12`)
 - [invariant] Logic the browser needs stays in `.ts` under `src/web/logic`, because Node cannot load `.tsx` and
   `node --test` covers only what Node loads
 - [fact] Import rule overrides stopped relative and `node:` imports per directory #measured (2026-11-08)
@@ -75,7 +83,8 @@ simplification can go back to the owner.
 
 - [invariant] Three projects: the root, with no DOM types, excluding `src/web/ui` and `src/e2e`;
   `src/web/tsconfig.json` for all of `src/web` but its tests, with DOM types and no Node types, so `logic` is checked
-  by both; `src/e2e/tsconfig.json` with both type sets, emitting nothing. A `/// <reference lib="dom" />` in one e2e test would make DOM types global across the root project
+  by both; `src/e2e/tsconfig.json` with both type sets, emitting nothing. A `/// <reference lib="dom" />` in one e2e
+  test would make DOM types global across the root project
 - [fact] A nested `src/web/tsconfig.json` worked with `tsc` and with oxlint's type-aware rules #measured (2026-11-08)
 - [fact] With `src/e2e/tsconfig.json` in place, oxlint's type-aware `no-floating-promises` fired on a file in
   `src/e2e`, as did the `e2e` import override #measured (2026-11-11)
@@ -84,6 +93,7 @@ simplification can go back to the owner.
 - [trap] A nested project that extends the root inherits that `exclude`, resolved from the root, so it excludes its
   own directory and `tsc` stops with TS18003, no inputs found. Each nested project sets `exclude` itself
   (`src/web/tsconfig.json`, `src/e2e/tsconfig.json`) #measured (2026-11-11)
+
 ### Schemas
 
 - [invariant] A type only the server uses is `z.infer` of its schema. A browser command has a plain type in `shared`
@@ -93,8 +103,12 @@ simplification can go back to the owner.
 - [invariant] Browser bodies use `z.strictObject` and `.exactOptional()`; `.optional()` conflicts with
   `exactOptionalPropertyTypes`, which the root project turns on (`tsconfig.json:14`)
 - [invariant] Plugin reports and stores use `z.object`, since extra fields are allowed there
-- [question] zod's `.exactOptional()`, `z.strictObject` and the two-way check were checked against its published
-  types by reading, not compiled; the first schema under `tsc` settles it
+  (`boardEntrySchema`, `src/server/sources/stores.ts:65`)
+- [fact] `.exactOptional()` compiles under `exactOptionalPropertyTypes`, beside `.default()` in the store schemas, and
+  its inferred `field?: T` is accepted where `undefined` is not, since `main.ts` passes the session list's rows to
+  the builder's `ListedSession`: `tsc -p tsconfig.json` exits 0 #measured (2026-11-11)
+- [question] `z.strictObject` and the two-way `Exact` check were checked against zod's published types by reading
+  only, and no code uses either yet; the first browser command schema under `tsc` settles it
 
 ## Relations
 
@@ -104,3 +118,4 @@ simplification can go back to the owner.
 - see_also [[Hub Plugin Socket]]
 - see_also [[Hub Commands]]
 - see_also [[Hub Tests]]
+- see_also [[Hub Style Guide]]

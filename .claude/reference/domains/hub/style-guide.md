@@ -15,7 +15,7 @@ sources:
 # Hub Style Guide
 
 > **Scope.** The page's colour tokens, the top bar, the dashboard card's parts and the layout rules later views
-> reuse, read from the dashboard's CSS, views and layout logic as built for issue #6, before its pull request opened. The palette and the card's look follow
+> reuse, read from the dashboard's CSS, views and layout logic on #PRNUM. The palette and the card's look follow
 > the owner's mockup, which is not in this repository. Not covered: how any of it renders in a browser (no line here
 > was measured), the waiting list and session views, which are not built, and the CSS rules [[Hub Browser Code]]
 > holds.
@@ -34,7 +34,8 @@ Read this before adding a view, a component or a colour to `src/web/`.
 ### Tokens
 
 - [fact] The tokens live on `:root` in `src/web/styles.css`: `--ground` for the page, `--dock` for the top bar,
-  `--surface` for a card or a notice, `--raised` for a hovered or current control, `--line` for every dividing line,
+  `--surface` for a card or a notice, `--raised` for a hovered or current control, `--raised-hover` for the current
+  control hovered, `--line` for every dividing line,
   `--fg` and `--muted` for text, `--accent` for focus and the current view (`:root`, `src/web/styles.css:4`)
 - [fact] Signal colours come in pairs, a fill for marks and an `-fg` for text: `--amber` and `--amber-fg` for what
   needs the owner and for away, `--red-fg` for errors, `--blue-fg` for distracted, `--green-fg` for a live connection
@@ -62,7 +63,7 @@ Read this before adding a view, a component or a colour to `src/web/`.
 - [fact] A card for a session that needs the owner carries a 3px `--amber` bar on its left edge, drawn with an inset
   `box-shadow` so the content does not shift
 - [fact] The state dot is filled `--amber` when the session needs the owner, filled `--accent` while it works, and a
-  `--muted` ring otherwise (`sessionTone`, `src/web/ui/dashboard.tsx:30`)
+  `--muted` ring otherwise (`sessionTone`, `src/web/ui/dashboard.tsx:31`)
 - [fact] Agent tasks show a heading of done and blocked counts and at most 3 open tasks, blocked first, each with a
   dot, the title cut to one line and its progress; "Show N more" expands the card in place (`cardTasks`,
   `src/web/logic/dashboard.ts:123`)
@@ -83,8 +84,9 @@ Read this before adding a view, a component or a colour to `src/web/`.
 
 ### Controls
 
-- [invariant] Every enabled button and link changes on hover, by a background change to `--raised` or a text change
-  from `--muted` to `--fg`; a disabled one shows `cursor: not-allowed` and no hover change
+- [invariant] Every enabled button and link changes on hover, the current one included, by a background change to
+  `--raised` or a text change from `--muted` to `--fg`; the current view, already on `--raised`, goes to
+  `--raised-hover`. A disabled one shows `cursor: not-allowed` and no hover change
 - [fact] Focus shows as a 2px `--accent` outline on `:focus-visible`, and `prefers-reduced-motion` turns transitions
   off
 - [fact] State shown by CSS is a `data-` attribute (`data-tone`, `data-mode`, `data-needs-you`, `data-blocked`), not

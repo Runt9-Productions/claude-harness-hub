@@ -57,6 +57,8 @@ a knowledge base note already answers a question, this file points there.
 - Ramp-up: not measured.
 - Briefs stay short: teammates load `CLAUDE.md`, so a brief carries the task, its write scope and what they cannot
   discover, and repeats no repo rule.
+- A teammate loads `CLAUDE.md` as it stood when the lead's session started, not as it stands now. After a merge or
+  fast-forward that changes it, the brief says what changed and tells the teammate to read the current file.
 
 ## 6. Build, test and pre-push
 
@@ -134,7 +136,8 @@ a knowledge base note already answers a question, this file points there.
 
 - Identity: the GitHub App bot, its name and email in `git config claude.botName` and `claude.botEmail`. Commit with
   `TZ=UTC git -c user.name="$(git config claude.botName)" -c user.email="$(git config claude.botEmail)" commit`.
-  Every command that writes a commit takes the same `-c` pair.
+  Every command that writes a commit takes the same `-c` pair. In a worktree-isolated session the hook refuses
+  `$(...)` inside a git command, so read the two keys first and pass their values as literal `-c` strings.
 - Messages and trailers: the trailer lines the harness supplies. A message states the change and its reason.
 - Remote: `bot`, the HTTPS remote. `origin` is SSH and the owner's. A push that adds a commit changing
   `.github/workflows/` is refused for the bot's token, so the owner makes that push over SSH.

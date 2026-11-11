@@ -4,6 +4,9 @@
 #
 # The pinned harness commit in the CI workflow is a full hash on purpose, allowed only on its line; finding["line"]
 # keeps its newline, hence `\s*$`.
+#
+# The W3C host is the XML namespace an SVG file must declare. The Open Collective host is the funding link npm copies
+# from a package's manifest into the lock file. The slashes are escaped so these lines are not URLs themselves.
 
 filter = '''
 filter.matchesAny(finding["match"], [`^(?:ABC|PROJ)-123$`]) ||
@@ -11,5 +14,14 @@ filter.matchesAny(finding["match"], [`^(?:ABC|PROJ)-123$`]) ||
     finding["rule_id"] == "hex-identifier" &&
     attributes["path"] == ".github/workflows/ci.yml" &&
     filter.matchesAny(finding["line"], [`^\s*HARNESS_SHA: [0-9a-f]{40}\s*$`])
+) ||
+(
+    finding["rule_id"] == "url-host" &&
+    filter.matchesAny(finding["match"], [`^http:\/\/www\.w3\.org$`])
+) ||
+(
+    finding["rule_id"] == "url-host" &&
+    attributes["path"] == "package-lock.json" &&
+    filter.matchesAny(finding["match"], [`^https:\/\/opencollective\.com$`])
 )
 '''

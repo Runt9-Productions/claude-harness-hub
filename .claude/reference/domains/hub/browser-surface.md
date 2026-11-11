@@ -3,8 +3,15 @@ title: Hub Browser Surface
 type: note
 permalink: hub/browser-surface
 tags: ["http", "auth", "launch-token", "csp", "trusted-types", "polling", "snapshot", "api"]
-verified: 2026-11-09
+verified: 2026-11-11
 coverage: partial
+sources:
+  - "src/server/main.ts"
+  - "src/server/http/browser.ts"
+  - "src/shared/api.ts"
+  - "src/web/ui/client.ts"
+  - "src/web/logic/poll.ts"
+  - "src/web/logic/connection.ts"
 measured_on: "Chrome 157, Node 26.13.0, on Linux under WSL2"
 ---
 
@@ -12,8 +19,11 @@ measured_on: "Chrome 157, Node 26.13.0, on Linux under WSL2"
 
 > **Scope.** How the hub starts, how a browser proves it may read and act, the checks and headers on every request,
 > the HTTP API with its `Snapshot` type, and how the page polls, as agreed with the owner on 2026-11-08 and 2026-11-09
-> before any hub code existed. The measured lines were taken on 2026-11-08 while designing and were not re-run for
-> this note. Not covered: the browser code's own rules ([[Hub Browser Code]]), what a command does once queued
+> before any hub code existed. On 2026-11-11, with the first slice built, the launch, token, `GET` check, header,
+> CSP and polling lines were checked against the sources listed; the `POST` checks, `POST /api/commands`, the
+> `Snapshot` fields beyond `runId`, `now`, `sessions` and `errors`, and the `202` reschedule are design the code does
+> not hold yet, carried forward unchecked. The measured lines were taken on 2026-11-08 while designing and were not
+> re-run. Not covered: the browser code's own rules ([[Hub Browser Code]]), what a command does once queued
 > ([[Hub Commands]]), and the socket the plugins use ([[Hub Plugin Socket]]), which has none of these checks.
 
 Read this before touching `src/server/http/browser.ts`, `src/server/main.ts`'s startup, `client.ts`, or any response
@@ -39,7 +49,8 @@ header.
 
 - [invariant] `client.ts` handles `#t=` on load and on `hashchange`: it replaces the hash with `#/`, sends
   `GET /api/snapshot` with the candidate, and saves it to `localStorage` only on a 200. On a 401 it keeps the stored
-  token and says the link is from an earlier run
+  token and says the link is from an earlier run. A `#t=` value that is not base64url gets the same notice and sends
+  no request (`takeLaunchLink`, `src/web/ui/client.ts:54`)
 - [fact] A page on another origin navigating a hub tab to `#t=x` signed out a tab that saved the token first, and
   left a tab that verified first at 200 with its token unchanged #measured (private Chrome, 2026-11-08)
 - [invariant] Every `/api/*` request sends `Authorization: Bearer <token>`. The server hashes both sides and compares
@@ -52,6 +63,11 @@ header.
 
 - [invariant] Check order: exact `Host` (`127.0.0.1:<port>`), route, then for `/api/*` the token. For a `POST`:
   exact `Origin`, `Content-Type: application/json`, a 64 KiB body cap, then the schema #order-dependent
+- [fact] As built, a wrong `Host` answers 421, an unknown path 404 whatever the method, a method other than `GET` on
+  a known path 405 with `Allow: GET`, and a missing or wrong token 401 with `WWW-Authenticate: Bearer`, in that order.
+  No route accepts a `POST` yet (`reply`, `src/server/http/browser.ts:76`)
+- [invariant] The route is matched on the raw path before `?`, never a normalised one, so only a path spelled exactly
+  as a route matches it
 - [fact] `curl.exe` on the Windows side reached a server bound to `127.0.0.1` in WSL2 and sent
   `Host: 127.0.0.1:<port>` #measured (2026-11-08)
 - [invariant] A throw in a handler is caught per request and answers 500
@@ -120,6 +136,8 @@ type CommandView = {
 }
 ```
 
+- [fact] The `Snapshot` type built so far holds `runId`, `now`, `sessions` typed as an always empty list, and
+  `errors`; the rest above is design (`Snapshot`, `src/shared/api.ts:10`)
 - [invariant] `runId` is constant for a run; when it changes the page reloads to get the new code
 - [invariant] Relative times count from the snapshot's `now`, not the browser's clock, because WSL2's clock can lag
   the host's after sleep

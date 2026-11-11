@@ -55,9 +55,11 @@ this slice builds of them.
 
 ### 03 Fixture script and docs
 
-- [invariant] `scripts/start-fixture-hub.sh` copies the fixtures to a new temporary directory, sets `HOME` and
-  `CLAUDE_CONFIG_DIR` to it, puts a stub `claude` first on `PATH`, builds the browser code and runs
-  `src/e2e/fixture-main.ts`, which calls `start(config)` on a free port and prints the link
+- [invariant] `scripts/start-fixture-hub.sh` copies `src/e2e/fixtures/` to a new temporary directory, sets `HOME` to
+  it and `CLAUDE_CONFIG_DIR` to its `.claude`, so the `HOME/.claude` fallback agrees, puts a stub `claude` first on
+  `PATH`, builds the browser code and runs `src/e2e/fixture-main.ts`, which refuses to start unless both variables
+  sit under the temporary directory, calls `start(config)` on a free port and prints the link. Stopping the script
+  stops the hub and removes the copy
 - [invariant] `src/e2e/tsconfig.json` with DOM and Node types, emitting nothing
 - [invariant] Docs: `CLAUDE.md` "Checks" gains the two other `tsc` runs; `.claude/development-profile.md` section 9
   loses "Whether it also runs in CI is being trialled."; the hub notes gain `sources` for the files that now exist,

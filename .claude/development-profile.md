@@ -107,7 +107,7 @@ a knowledge base note already answers a question, this file points there.
 ## 9. Review
 
 - Code review: the `lens-review` plugin, with `.claude/code-review-profile.md` and the agent and lenses in
-  `.claude/agents/lens-review/`, run locally. Whether it also runs in CI is being trialled.
+  `.claude/agents/lens-review/`, run locally.
 - When: the test review and the code review each run once per pull request, when it is first pushed: the test review,
   then the code review over the head that carries its fixes. A later push gets CI only; say what changed and the owner
   decides whether it gets another review. A trivial pull request gets neither and opens ready.

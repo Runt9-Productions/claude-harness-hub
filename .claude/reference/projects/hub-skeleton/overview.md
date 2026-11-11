@@ -15,7 +15,7 @@ is refused. It ends when that pull request merges and `gate` passes on it.
 
 ## Where it stands
 
-- [status] Spec written; the build has not started
+- [status] All three checklist items built; the pull request, its reviews and the owner's CI commit come next
 
 ## Documents
 

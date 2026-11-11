@@ -28,6 +28,8 @@ Run `nvm use` and `npm ci` once, then from the root:
 
 ```
 npx tsc -p tsconfig.json
+npx tsc -p src/web/tsconfig.json
+npx tsc -p src/e2e/tsconfig.json
 npx oxlint -c .oxlintrc.json --type-aware --deny-warnings --report-unused-disable-directives-severity=error src
 npx prettier --check --config .prettierrc.json --ignore-path .prettierignore --no-editorconfig .
 node --test 'src/**/*.test.ts'

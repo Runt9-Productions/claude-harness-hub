@@ -80,7 +80,6 @@ type RowProps = {
   children: ComponentChildren;
 };
 
-/** One collapsed line that opens in place; pressing the open row closes it, pressing another opens that one. */
 function Row({ row, title, now, isOpen, dispatch, children }: RowProps) {
   function toggle(): void {
     dispatch(isOpen ? { kind: "rowClosed" } : { kind: "rowOpened", key: row.key });
@@ -142,7 +141,6 @@ function Held({ held }: { held: readonly SessionView[] }) {
 
 type WaitingViewProps = { snapshot: Snapshot; openRow: OpenRowChoice; dispatch: PageDispatch };
 
-/** "Everything waiting": decisions beside owner tasks, each oldest first, with one row open across both. */
 export function WaitingView({ snapshot, openRow, dispatch }: WaitingViewProps) {
   const list = waitingList(snapshot.sessions);
   const openKey = openRowKey(openRow, list);

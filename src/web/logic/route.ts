@@ -1,4 +1,4 @@
-/** The view the hash names. `unknown` covers every other hash, which the page names rather than mapping to a view. */
+/** The view the hash names. `unknown` is any other hash; the page reports it instead of showing a view. */
 export type Route = "dashboard" | "waiting" | "unknown";
 
 export function readRoute(hash: string): Route {

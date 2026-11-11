@@ -540,7 +540,6 @@
     padding: 4px 10px 14px;
   }
 
-  /* Board text keeps its own line breaks. */
   .row-text {
     color: var(--muted);
     white-space: pre-wrap;

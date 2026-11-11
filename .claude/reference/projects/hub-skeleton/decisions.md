@@ -30,7 +30,9 @@ Rulings for the first slice. The design itself is in the hub notes under `domain
 - [proposal] `src/shared` holds the API paths as its runtime value, used by both the server routes and the client,
   so it is a file a test loads (open)
 
+- [decision] The bot commits the owner's Preact install in `package.json` and `package-lock.json`, with the `start`
+  script, alongside task 02, since the pre-push hook takes only the bot's commits (owner, 2026-11-11)
+
 ## Open Questions
 
-- [question] Whether the bot stages and commits the owner's Preact install in `package.json` and `package-lock.json`,
-  together with the `start` script, since the pre-push hook takes only the bot's commits
+None.

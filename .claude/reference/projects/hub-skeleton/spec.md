@@ -45,7 +45,8 @@ this slice builds of them.
   `react/react-in-jsx-scope` off, the import rules per directory from [[Hub Architecture]], and `document` and
   `window` barred in `src/web/logic`
 - [invariant] `src/web/logic/`: the poll interval, the connection reducer (`loading`, `live`, `stale`, `signedOut`)
-  that replaces the snapshot whole, and reading a token out of `#t=`, each with `node:test` tests
+  that replaces the snapshot whole, reading a token out of `#t=`, and `readSnapshot`, which narrows a response body
+  to the snapshot type and throws on a body that does not fit, each with `node:test` tests
 - [invariant] `src/web/ui/`: `main.tsx` with the root error boundary and the `error` and `unhandledrejection`
   banner; `client.ts` with the token flow (verify, then save), the bearer header, the chained poll with
   `AbortSignal.timeout(8000)`, the visibility reschedule, the 401 banner and the reload on a new `runId`; a view that

@@ -1,0 +1,89 @@
+@layer base, layout, components;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    --surface: #0f172a;
+    --surface-raised: #1e293b;
+    --border: #334155;
+    --text: #e2e8f0;
+    --text-muted: #94a3b8;
+    --live: #86efac;
+    --warning: #fcd34d;
+    --danger: #fca5a5;
+    --space: 0.75rem;
+    font-family:
+      system-ui,
+      -apple-system,
+      "Segoe UI",
+      Roboto,
+      sans-serif;
+    background: var(--surface);
+    color: var(--text);
+  }
+
+  body {
+    margin: 0;
+  }
+
+  h1,
+  p {
+    margin: 0;
+  }
+}
+
+@layer layout {
+  .top-bar {
+    display: flex;
+    align-items: baseline;
+    gap: calc(var(--space) * 2);
+    padding: var(--space) calc(var(--space) * 2);
+    background: var(--surface-raised);
+    border-bottom: 1px solid var(--border);
+
+    h1 {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+  }
+
+  main {
+    padding: calc(var(--space) * 2);
+  }
+}
+
+@layer components {
+  .connection {
+    color: var(--text-muted);
+
+    &[data-connection="live"] {
+      color: var(--live);
+    }
+
+    &[data-connection="stale"] {
+      color: var(--warning);
+    }
+
+    &[data-connection="signedOut"] {
+      color: var(--danger);
+    }
+  }
+
+  .notice,
+  .failure {
+    padding: var(--space) calc(var(--space) * 2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .notice {
+    color: var(--warning);
+  }
+
+  .failure {
+    color: var(--danger);
+  }
+
+  .empty {
+    color: var(--text-muted);
+  }
+}

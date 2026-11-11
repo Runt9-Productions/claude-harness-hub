@@ -1,4 +1,6 @@
 {
+  // Naming any plugin replaces the default list, so the defaults are listed with react.
+  "plugins": ["typescript", "unicorn", "oxc", "react"],
   "options": { "typeAware": true, "reportUnusedDisableDirectives": "error" },
   "categories": { "correctness": "error", "suspicious": "error" },
   "rules": {
@@ -17,6 +19,87 @@
     "typescript/await-thenable": "error",
     "typescript/switch-exhaustiveness-check": "error",
     "typescript/prefer-nullish-coalescing": "error",
-    "typescript/strict-boolean-expressions": ["error", { "allowString": false, "allowNumber": false }]
-  }
+    "typescript/strict-boolean-expressions": ["error", { "allowString": false, "allowNumber": false }],
+    "react/no-danger": "error",
+    "react/react-in-jsx-scope": "off"
+  },
+  // What each module may import, from the module table in the hub architecture note. Each group bars every
+  // specifier, then re-allows the module's own files and what it may import; `*` stops at `/`, so `node:fs/promises`
+  // needs `node:*/**`. Tests are left free, since they import node:test.
+  "overrides": [
+    {
+      "files": ["src/shared/**"],
+      "excludeFiles": ["**/*.test.ts"],
+      "rules": { "no-restricted-imports": ["error", { "patterns": [{ "group": ["**"] }] }] }
+    },
+    {
+      "files": ["src/server/hub/**"],
+      "excludeFiles": ["**/*.test.ts"],
+      "rules": {
+        "no-restricted-imports": ["error", { "patterns": [{ "group": ["**", "!./**", "!../../shared/**"] }] }]
+      }
+    },
+    {
+      "files": ["src/server/sources/**", "src/server/http/**"],
+      "excludeFiles": ["**/*.test.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          { "patterns": [{ "group": ["**", "!./**", "!../../shared/**", "!node:*", "!node:*/**", "!zod"] }] }
+        ]
+      }
+    },
+    {
+      "files": ["src/server/*.ts"],
+      "excludeFiles": ["**/*.test.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          { "patterns": [{ "group": ["../web/**", "../e2e/**", "preact", "preact/**"] }] }
+        ]
+      }
+    },
+    {
+      "files": ["src/web/logic/**"],
+      "excludeFiles": ["**/*.test.ts"],
+      "rules": {
+        "no-restricted-imports": ["error", { "patterns": [{ "group": ["**", "!./**", "!../../shared/**"] }] }],
+        "no-restricted-globals": ["error", "document", "window"]
+      }
+    },
+    {
+      "files": ["src/web/ui/**"],
+      "excludeFiles": ["**/*.test.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          { "patterns": [{ "group": ["**", "!./**", "!../logic/**", "!../../shared/**", "!preact", "!preact/**"] }] }
+        ]
+      }
+    },
+    {
+      "files": ["src/e2e/**"],
+      "excludeFiles": ["**/*.test.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "**",
+                  "!./**",
+                  "!../server/main.ts",
+                  "!../shared/**",
+                  "!node:*",
+                  "!node:*/**",
+                  "!@playwright/test"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
 }

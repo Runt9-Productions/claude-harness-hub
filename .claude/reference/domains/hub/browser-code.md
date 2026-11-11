@@ -10,6 +10,9 @@ sources:
   - "src/server/http/assets.ts"
   - "src/server/main.ts"
   - "src/web/ui/main.tsx"
+  - "src/web/ui/dashboard.tsx"
+  - "src/web/logic/dashboard.ts"
+  - "src/web/logic/page-state.ts"
   - "src/web/styles.css"
   - ".oxlintrc.json"
   - ".gitignore"
@@ -20,12 +23,13 @@ measured_on: "Preact 11.2.0 and 11.1.1, Chrome 157, Node 26.13.0, oxlint 1.90.0,
 # Hub Browser Code
 
 > **Scope.** How the page is built and served, and the rules for its state, layout stability, error handling and
-> CSS, as agreed with the owner on 2026-11-08 and 2026-11-09 before any hub code existed. On 2026-11-11, with the
-> first slice built, the build, serving, root error handling, CSS file and lint lines were checked against the
-> sources listed; the rest (per-card boundaries, UI state, commands, routes other than `#/`, list stability) is
-> design the code does not hold yet, carried forward unchecked. The Preact 11.2.0 lines were measured on 2026-11-08
-> while designing and not re-run. Not covered: polling, the token and the CSP itself ([[Hub Browser Surface]]), and
-> the interface's look, which the owner set outside this repository.
+> CSS, as agreed with the owner on 2026-11-08 and 2026-11-09 before any hub code existed. On #24 the build, serving,
+> root error handling, CSS file and lint lines were checked against the sources listed, and on #26 the error
+> boundary, UI state, dashboard order and list stability lines were checked against the dashboard; the #24 lines were
+> carried forward without a re-read. Commands, routes other than `#/`, the rest of the UI state and list stability
+> outside the dashboard are design the code does not hold yet, carried forward unchecked. The Preact 11.2.0 lines
+> were measured on 2026-11-08 while designing and not re-run. Not covered: polling, the token and the CSP itself
+> ([[Hub Browser Surface]]), and the interface's look ([[Hub Style Guide]]).
 
 Read this before touching anything under `src/web/`, the asset table in `src/server/http/assets.ts`, or the browser
 build.
@@ -43,7 +47,7 @@ build.
 - [trap] `tsc` emits even when it reports errors, so `npm start` runs `tsc -p src/web/tsconfig.json && node
   src/server/main.ts` and a type error stops the start #silent-failure
 - [invariant] `main.ts` builds paths from `import.meta.url`, never the working directory (`runFromCommandLine`,
-  `src/server/main.ts:98`)
+  `src/server/main.ts:122`)
 - [invariant] Preact is served from the installed package as three files: `dist/preact.mjs`, `hooks/dist/hooks.mjs`
   and `jsx-runtime/dist/jsxRuntime.mjs`. Emitted code and Preact's own files import the bare name `preact`, which
   the page's inline import map resolves. The map is built from the same list as the `/vendor/` URLs (`importMap`,
@@ -75,6 +79,18 @@ build.
   state library or signals
 - [invariant] UI state (open row, expanded cards, note drafts, commands in flight) lives in the same reducer apart
   from the snapshot; a new snapshot never touches it
+- [fact] Only expanded cards exist so far: `pageReducer` is the connection reducer plus `expandedCards`, a set of
+  session keys that no connection event changes, so a card keeps its expansion when it moves between groups and
+  remounts (`pageReducer`, `src/web/logic/page-state.ts:22`)
+- [fact] The viewport width is read in `ui` through a `resize` listener and passed to `columnCount` in `logic`, not
+  kept in the reducer, since `logic` may not touch `window` (`useViewportWidth`, `src/web/ui/dashboard.tsx:16`)
+- [fact] Each group's column placement is kept outside the reducer too, in `useState` inside its `Group`. Each
+  render places the cards against the held placement with `placeInColumns` and sets the state, during render, only
+  when the placement changed, so the extra render it causes places the same way and stops. A ref written during render
+  or in an effect fails oxlint's `react(immutability)` rule (`useHeldColumns`, `src/web/ui/dashboard.tsx:171`)
+- [fact] A `Group` stays mounted while its group is empty, so it keeps its state; with no sessions at all the
+  dashboard draws its empty line instead and both `Group`s unmount, which loses nothing, since no card is left to
+  hold a column
 - [invariant] A command stays in flight until a snapshot contains its id, because a snapshot requested before the
   `POST` can arrive after the `202` #order-dependent
 - [invariant] List keys are stable and composite, `<session key>/<kind>/<itemId>`, since item ids restart in each
@@ -91,12 +107,17 @@ build.
   The list settles when pointer and focus leave or the screen changes
 - [invariant] A row opened by answering the one before it ignores presses for 1.5 seconds, as the pane's keys do
 - [invariant] The dashboard sorts by needs-you, then `startedAt`, never by status; this is a pure function in `logic`
+  (`groupSessions`, `src/web/logic/dashboard.ts:13`), and the hub sends sessions in the CLI's order
+- [fact] The dashboard does not hold slots under the pointer: a card moves between groups on the next snapshot even
+  while the pointer is on it, and a session that leaves closes the gap beneath it in its own column. No other card
+  changes column (`placeInColumns`, `src/web/logic/dashboard.ts:100`). Its only control, Show more, sends nothing, so
+  the waiting list is the first view that needs the rule
 
 ### Errors, CSS and what Preact does differently
 
 - [invariant] `useErrorBoundary` from `preact/hooks` wraps the root and each session card, so one bad session shows
-  its error and the rest carry on. It calls `console.error`, because a caught error reaches no `window` event. Only
-  the root's exists so far (`Root`, `src/web/ui/main.tsx:14`)
+  its error and the rest carry on. Each calls `console.error`, because a caught error reaches no `window` event
+  (`Root`, `src/web/ui/main.tsx:14`; `CardBoundary`, `src/web/ui/dashboard.tsx:141`)
 - [invariant] The failure banner is built with plain DOM outside Preact, so it still shows when Preact is what failed
 - [invariant] `error` and `unhandledrejection` listeners show a banner for failures outside render; without them a
   throw during render leaves a half-updated page that looks live #silent-failure
@@ -119,3 +140,4 @@ build.
 
 - part_of [[Hub Architecture]]
 - see_also [[Hub Browser Surface]]
+- see_also [[Hub Style Guide]]

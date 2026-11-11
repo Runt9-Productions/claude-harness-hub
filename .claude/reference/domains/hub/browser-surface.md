@@ -13,6 +13,7 @@ sources:
   - "src/web/logic/poll.ts"
   - "src/web/logic/connection.ts"
   - "src/web/logic/snapshot.ts"
+  - "src/server/sources/stores.ts"
 measured_on: "Chrome 157, Node 26.13.0, on Linux under WSL2"
 ---
 
@@ -20,12 +21,15 @@ measured_on: "Chrome 157, Node 26.13.0, on Linux under WSL2"
 
 > **Scope.** How the hub starts, how a browser proves it may read and act, the checks and headers on every request,
 > the HTTP API with its `Snapshot` type, and how the page polls, as agreed with the owner on 2026-11-08 and 2026-11-09
-> before any hub code existed. On 2026-11-11, with the first slice built, the launch, token, `GET` check, header,
-> CSP and polling lines were checked against the sources listed; the `POST` checks, `POST /api/commands`, the
-> `Snapshot` fields beyond `runId`, `now`, `sessions` and `errors`, and the `202` reschedule are design the code does
-> not hold yet, carried forward unchecked. The measured lines were taken on 2026-11-08 while designing and were not
-> re-run, except the `100 Continue` line, taken on 2026-11-11. Not covered: the browser code's own rules ([[Hub Browser Code]]), what a command does once queued
-> ([[Hub Commands]]), and the socket the plugins use ([[Hub Plugin Socket]]), which has none of these checks.
+> before any hub code existed. On #24 the launch, token, `GET` check, header, CSP and polling lines were checked
+> against the sources listed. On #26 the 500 path, the `Snapshot` and `SessionView` types, the page's snapshot
+> reader and the line numbers cited were checked again; the other lines checked on #24 were carried forward without a
+> re-read. The `POST` checks, `POST /api/commands`, the `commands`, `usage`, `activity`, `contextPercent` and
+> `sandboxProblem` fields and the `202` reschedule are design the code does not hold yet, carried forward unchecked.
+> The measured lines were taken on 2026-11-08 while designing and were not re-run, except the `100 Continue` line,
+> taken on 2026-11-11. Not covered: the browser code's own rules ([[Hub Browser Code]]), how the sessions in a
+> snapshot are read and built ([[Hub Outside State]]), what a command does once queued ([[Hub Commands]]), and the
+> socket the plugins use ([[Hub Plugin Socket]]), which has none of these checks.
 
 Read this before touching `src/server/http/browser.ts`, `src/server/main.ts`'s startup, `client.ts`, or any response
 header.
@@ -40,8 +44,8 @@ header.
   transcript (owner, 2026-11-08)
 - [invariant] `npm start` makes a random 32-byte token held only in memory and prints
   `http://127.0.0.1:<port>/#t=<token>` once. Tests and the fixture script call `start(config)` instead. `npm start`
-  and the fixture script print the link from one function, whose output a test reads back with the page's `readLaunchHash` (`launchLink`,
-  `src/shared/api.ts:8`)
+  and the fixture script print the link from one function, whose output a test reads back with the page's
+  `readLaunchHash` (`launchLink`, `src/shared/api.ts:8`)
 - [fact] A script run through `npm start` saw a terminal on stdout under a pty and none when piped, `--port` reached
   it, and `import.meta.main` was true when run and false when imported #measured (2026-11-08)
 - [invariant] The port is fixed so the origin and the saved token stay put across restarts: 47821, or `--port <n>`.
@@ -68,13 +72,19 @@ header.
   exact `Origin`, `Content-Type: application/json`, a 64 KiB body cap, then the schema #order-dependent
 - [fact] As built, a wrong `Host` answers 421, an unknown path 404 whatever the method, a method other than `GET` on
   a known path 405 with `Allow: GET`, and a missing or wrong token 401 with `WWW-Authenticate: Bearer`, in that order.
-  No route accepts a `POST` yet (`reply`, `src/server/http/browser.ts:111`)
+  No route accepts a `POST` yet (`reply`, `src/server/http/browser.ts:127`)
 - [invariant] The route is matched on the raw path before `?`, never a normalised one, so only a path spelled exactly
   as a route matches it
 - [fact] `curl.exe` on the Windows side reached a server bound to `127.0.0.1` in WSL2 and sent
   `Host: 127.0.0.1:<port>` #measured (2026-11-08)
-- [invariant] A throw in a handler is caught per request and answers 500
+- [invariant] A throw in a handler, or a rejected snapshot, is caught per request and answers 500
+  (`handleBrowserRequest`, `src/server/http/browser.ts:144`)
 - [invariant] Logs and error messages name fields, never board text or other values
+- [fact] The 500 log holds the matched route's fixed path, else "an unrouted path", the error's `name` and `code`,
+  each only when it is a plain identifier, and the stack's `at` lines, never the message or the stack's opening
+  lines (`failureDescription`, `src/server/http/browser.ts:90`)
+- [risk] The frame filter keeps any stack line that starts with whitespace and `at `, so a multi-line message holding
+  such a line would be logged; not seen
 - [invariant] Every response carries the CSP below, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`
   and `Cache-Control: no-store` (so board text is not cached on disk). There are no CORS headers
 - [trap] Node answers some requests itself, with none of these headers. One it cannot parse (400), with headers or
@@ -83,7 +93,7 @@ header.
   does, since a half-open socket outlives `end` (`createClientErrorHandler`, `src/server/http/browser.ts:64`)
 - [trap] Node also answers an HTTP/1.1 request with no `Host` (400) and an `Expect` other than `100-continue` (417)
   without emitting `request`. The hub sets `requireHostHeader: false` and listens for `checkExpectation`, so both
-  reach the handler's checks; a missing `Host` gets 421 (`start`, `src/server/main.ts:40`)
+  reach the handler's checks; a missing `Host` gets 421 (`start`, `src/server/main.ts:47`)
 - [fact] `Expect: 100-continue` still gets Node's bare interim `100 Continue` before the handler's reply #measured
   (Node 26.13.0, 2026-11-11)
 
@@ -120,7 +130,7 @@ type SessionView = {
   mode?: 'present' | 'distracted' | 'away'; sandboxProblem?: string
   decisions: DecisionView[]; ownerTasks: OwnerTaskView[]; tasks: TaskView[]
   activity?: ActivityView[]; contextPercent?: number
-  hasUnreadAnswers: boolean; canAnswer: boolean; canSetMode: boolean
+  needsYou: boolean; waitingCount: number; hasUnreadAnswers: boolean; canAnswer: boolean; canSetMode: boolean
 }
 type DecisionView = {
   id: string; rev: number; createdAt?: number
@@ -148,11 +158,21 @@ type CommandView = {
 }
 ```
 
-- [fact] The `Snapshot` type built so far holds `runId`, `now`, `sessions` typed as an always empty list, and
-  `errors`; the rest above is design (`Snapshot`, `src/shared/api.ts:18`)
+- [fact] As built, `Snapshot` holds `runId`, `now`, `sessions` and `errors`, and `SessionView` holds every field
+  above except `sandboxProblem`, `activity` and `contextPercent`; `commands`, `usage` and those three are design
+  (`SessionView`, `src/shared/api.ts:68`)
+- [invariant] `needsYou` and `waitingCount` are decided by the hub, so the browser groups and counts cards without
+  knowing the rule; the rule is in [[Hub Outside State]]
+- [invariant] The delivery and mode values are listed once, as `deliveries` and `modes` in `src/shared/api.ts`, and
+  the types, the store schemas and the page's reader are all built from them. The page's reader throws on a value it
+  does not list, which fails every poll, so a second copy that missed a value would take the whole page down
+  (`deliveries`, `src/shared/api.ts:18`)
 - [invariant] `runId` is constant for a run; when it changes the page reloads to get the new code. It is read and
   compared before the rest of the body is narrowed, since a restarted hub may serve a shape the old page rejects
-  (`readRunSnapshot`, `src/web/logic/snapshot.ts:32`)
+  (`readRunSnapshot`, `src/web/logic/snapshot.ts:174`)
+- [invariant] The page narrows the body by hand, field by field: only named fields are copied, an absent optional
+  field stays absent rather than `undefined`, and a value that does not fit throws naming its path, such as
+  `snapshot field sessions entry 0 field mode` (`objectOf`, `src/web/logic/snapshot.ts:58`)
 - [invariant] Relative times count from the snapshot's `now`, not the browser's clock, because WSL2's clock can lag
   the host's after sleep
 
@@ -164,8 +184,8 @@ type CommandView = {
   while visible and every 30 seconds while `document.hidden`, the interval chosen by a pure function in `logic`
 - [invariant] The visibility event and a `202` reschedule the same loop rather than starting a second fetch
 - [invariant] Every request uses `AbortSignal.timeout(8000)`; `fetch` has no default timeout, so one hung request
-  would end a chained loop for good #silent-failure. The 8 seconds is meant to outlast the 5 second `claude agents`
-  timeout in [[Hub Outside State]], which is not built yet
+  would end a chained loop for good #silent-failure. The 8 seconds outlasts the 5 second `claude agents` timeout in
+  [[Hub Outside State]], which a request waits on only until the hub has read its first list
 - [invariant] The 30 second hidden interval is the hub's own choice: Chrome does not slow this loop, see
   [[Chrome Hidden Tab Timers]]. Without it a dashboard left up costs about 5% of a core all day
 - [invariant] Every poll dispatches with no `ETag`: Preact changes no DOM when nothing changed, and rendering costs

@@ -14,10 +14,12 @@ Notes an agent reads before the code or the tool behaviour they cover. The forma
 | [Hub Outside State](domains/hub/outside-state.md) | touching `src/server/sources/`, the snapshot builder or a store schema |
 | [Hub Plugin Socket](domains/hub/plugin-socket.md) | touching the socket, its routes, reports or the `hub` plugin's side of the contract |
 | [Hub Commands](domains/hub/commands.md) | touching `POST /api/commands`, the command queue or how a plugin applies a command |
+| [Hub Style Guide](domains/hub/style-guide.md) | adding a view, a component or a colour to `src/web/` |
 | [Hub Tests](domains/hub/tests.md) | writing a test, a fixture or the fixture script |
 | [Claude Agents JSON List](domains/platform/claude-agents-json.md) | writing the session list's schema or fixtures |
 | [Chrome Hidden Tab Timers](domains/platform/chrome-hidden-tab-timers.md) | changing the poll interval or relying on Chrome to slow a hidden tab |
 | [Hub Skeleton](projects/hub-skeleton/overview.md) | building the first slice, issue #5 |
+| [Session Dashboard](projects/session-dashboard/overview.md) | building the dashboard and its sources, issue #6 |
 
 ## Local conventions
 

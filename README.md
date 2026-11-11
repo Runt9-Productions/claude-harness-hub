@@ -18,4 +18,8 @@ npm start
 Open the link it prints. It refuses to start when its output is not a terminal, since the link is printed only there,
 and when its port (47821 by default) is busy; `npm start -- --port <port>` picks another.
 
+The hub lists sessions by running `claude agents`, so `claude` must be on its `PATH`; until it is, the page shows an
+error and no sessions. It reads the stores under `$CLAUDE_CONFIG_DIR`, or `~/.claude` when that is unset, and refuses
+to start when `$CLAUDE_CONFIG_DIR` is not an absolute path.
+
 To update, pull and run `npm ci` again before `npm start`.

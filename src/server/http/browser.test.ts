@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { once } from "node:events";
-import { createServer } from "node:http";
+import { createServer, get, type IncomingMessage } from "node:http";
 import { connect, type Socket } from "node:net";
 import { test, type TestContext } from "node:test";
-import { createClientErrorHandler } from "./browser.ts";
+import { createBrowserHandler, createClientErrorHandler } from "./browser.ts";
 
 const requestTimeoutMs = 200;
 
@@ -54,4 +54,35 @@ void test("a chunk extension over Node's limit gets a 413", { timeout: 5000 }, a
   const request = `POST / HTTP/1.1\r\nHost: example.com\r\nTransfer-Encoding: chunked\r\n\r\n1;${extension}\r\nx\r\n0\r\n\r\n`;
   const { statusLine } = await sendWithoutClosing(t, request);
   assert.equal(statusLine, "HTTP/1.1 413 Payload Too Large");
+});
+
+void test("a snapshot that rejects answers 500 with the fixed headers and logs no part of its message", async (t) => {
+  const server = createServer().listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => server.close());
+  const address = server.address();
+  assert.ok(typeof address === "object" && address !== null);
+  const handler = createBrowserHandler({
+    port: address.port,
+    token: "example-token",
+    page: "",
+    importMap: "{}",
+    assets: new Map(),
+    snapshot: () => Promise.reject(Object.assign(new TypeError("example board text"), { code: "ERR_EXAMPLE" })),
+  });
+  server.on("request", handler);
+  const logged = t.mock.method(console, "error", () => undefined);
+
+  const headers = { authorization: "Bearer example-token" };
+  const options = { host: "127.0.0.1", port: address.port, path: "/api/snapshot", headers };
+  const response = await new Promise<IncomingMessage>((resolve, reject) => {
+    get(options, resolve).on("error", reject);
+  });
+  response.resume();
+  assert.equal(response.statusCode, 500);
+  assert.match(String(response.headers["content-security-policy"]), /^default-src 'none'; /);
+  assert.equal(response.headers["cache-control"], "no-store");
+  const [line] = logged.mock.calls.map((call) => call.arguments.join(" "));
+  assert.match(String(line), /^hub: \/api\/snapshot failed: TypeError ERR_EXAMPLE\n\s+at /);
+  assert.doesNotMatch(String(line), /example board text/);
 });

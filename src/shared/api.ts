@@ -15,9 +15,86 @@ export type SourceError = {
   message: string;
 };
 
+export const deliveries = ["sending", "sent", "seen", "failed"] as const;
+
+export type Delivery = (typeof deliveries)[number];
+
+export const modes = ["present", "distracted", "away"] as const;
+
+export type Mode = (typeof modes)[number];
+
+export type Item = { label: string; isTicked: boolean };
+
+export type DecisionView = {
+  id: string;
+  rev: number;
+  createdAt?: number;
+  question: string;
+  context?: string;
+  options: { label: string; description?: string }[];
+  recommended?: number;
+  askedBy?: string;
+  plugin?: string;
+  isAnswerKept: boolean;
+  answer?: string;
+  chosenOption?: string;
+  /** Present only once answered. */
+  note?: string;
+  delivery?: Delivery;
+};
+
+export type OwnerTaskView = {
+  id: string;
+  rev: number;
+  createdAt?: number;
+  title: string;
+  description?: string;
+  postedBy?: string;
+  items: Item[];
+  isStartPressed: boolean;
+  isDone: boolean;
+  lastChange?: { summary: string; delivery: Delivery };
+};
+
+export type TaskView = {
+  id: string;
+  title: string;
+  status: string;
+  note?: string;
+  holderId?: string;
+  items: Item[];
+};
+
+export type SessionView = {
+  /** `sessionId`, else the short `id`. */
+  key: string;
+  sessionId?: string;
+  shortId?: string;
+  name?: string;
+  cwd: string;
+  kind: string;
+  startedAt: number;
+  isProcessAlive: boolean;
+  /** `status`, `state` and `waitingFor` hold the CLI's raw text, since it can add values. */
+  status?: string;
+  state?: string;
+  waitingFor?: string;
+  /** Absent when no store holds one; the view draws that as present. */
+  mode?: Mode;
+  decisions: DecisionView[];
+  ownerTasks: OwnerTaskView[];
+  tasks: TaskView[];
+  needsYou: boolean;
+  /** Unanswered decisions plus unfinished owner tasks. */
+  waitingCount: number;
+  hasUnreadAnswers: boolean;
+  canAnswer: boolean;
+  canSetMode: boolean;
+};
+
 export type Snapshot = {
   runId: string;
   now: number;
-  sessions: [];
+  sessions: SessionView[];
   errors: SourceError[];
 };

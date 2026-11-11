@@ -1,0 +1,41 @@
+[
+  {
+    "cwd": "/srv/example/alpha",
+    "kind": "interactive",
+    "name": "Tidy the parser",
+    "pid": 41001,
+    "sessionId": "fixture-session-alpha",
+    "startedAt": 1794300000000,
+    "status": "busy"
+  },
+  {
+    "cwd": "/srv/example/beta",
+    "kind": "interactive",
+    "name": "Add the export button",
+    "pid": 41002,
+    "sessionId": "fixture-session-beta",
+    "startedAt": 1794300600000,
+    "status": "waiting",
+    "waitingFor": "permission prompt"
+  },
+  {
+    "cwd": "/srv/example/gamma",
+    "id": "fixgamma",
+    "kind": "background",
+    "name": "Run the nightly report",
+    "pid": 41003,
+    "sessionId": "fixture-session-gamma",
+    "startedAt": 1794301200000,
+    "state": "working",
+    "status": "busy"
+  },
+  {
+    "cwd": "/srv/example/delta",
+    "id": "fixdelta",
+    "kind": "background",
+    "name": "Draft the release notes",
+    "sessionId": "fixture-session-delta",
+    "startedAt": 1794301800000,
+    "state": "stopped"
+  }
+]

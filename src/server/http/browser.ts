@@ -52,6 +52,7 @@ function fixedHeaders(importMap: string): Record<string, string> {
 function clientErrorStatus(error: Error): number {
   if (!("code" in error)) return 400;
   if (error.code === "HPE_HEADER_OVERFLOW") return 431;
+  if (error.code === "HPE_CHUNK_EXTENSIONS_OVERFLOW") return 413;
   if (error.code === "ERR_HTTP_REQUEST_TIMEOUT") return 408;
   return 400;
 }
@@ -71,7 +72,8 @@ export function createClientErrorHandler(importMap: string): (error: Error, sock
     }
     const status = clientErrorStatus(error);
     const statusLine = `HTTP/1.1 ${status} ${STATUS_CODES[status] ?? ""}\r\n`;
-    socket.end(`${statusLine}${headerLines.join("")}\r\n`);
+    // The server is half-open, so a stalled client that never sends its FIN would keep the socket after `end` alone.
+    socket.end(`${statusLine}${headerLines.join("")}\r\n`, () => socket.destroy());
   };
 }
 

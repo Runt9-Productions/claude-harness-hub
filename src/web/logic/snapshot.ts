@@ -23,10 +23,17 @@ function readSourceError(value: unknown): SourceError {
   return { ...error, sessionId: readString(value, "sessionId", "snapshot errors entry") };
 }
 
-/** Reads only `runId`, so a page can see that the hub restarted from a body its own build cannot narrow. */
-export function readRunId(body: unknown): string {
+export type RunSnapshot = { kind: "restarted" } | { kind: "snapshot"; snapshot: Snapshot };
+
+/**
+ * Narrows the body, or answers `restarted` when its `runId` is not `knownRunId`. The `runId` is compared before
+ * narrowing, since a restarted hub may serve a shape this build rejects.
+ */
+export function readRunSnapshot(body: unknown, knownRunId: string | undefined): RunSnapshot {
   if (!isJsonObject(body)) throw new Error("snapshot is not an object");
-  return readString(body, "runId", "snapshot");
+  const runId = readString(body, "runId", "snapshot");
+  if (knownRunId !== undefined && runId !== knownRunId) return { kind: "restarted" };
+  return { kind: "snapshot", snapshot: readSnapshot(body) };
 }
 
 /** Narrows a `GET /api/snapshot` body to `Snapshot`, throwing with the name of the first field that does not fit. */

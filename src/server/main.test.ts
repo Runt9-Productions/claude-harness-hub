@@ -200,6 +200,13 @@ void test("every kind of response carries its status and own headers, and the CS
     ["asset gone since startup", 500, {}, send(hub.port, "/assets/icon.svg")],
     ["unparseable request", 400, { connection: "close" }, sendRaw(hub.port, "BOGUS\r\n\r\n")],
     ["oversized headers", 431, { connection: "close" }, sendRaw(hub.port, oversizedHeaders)],
+    ["no host", 421, {}, sendRaw(hub.port, "GET / HTTP/1.1\r\nConnection: close\r\n\r\n")],
+    [
+      "unknown expectation",
+      421,
+      {},
+      sendRaw(hub.port, "GET / HTTP/1.1\r\nHost: localhost\r\nExpect: example\r\nConnection: close\r\n\r\n"),
+    ],
   ];
   for (const [kind, status, ownHeaders, pending] of cases) {
     const reply = await pending;

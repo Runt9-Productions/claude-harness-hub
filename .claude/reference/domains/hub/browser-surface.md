@@ -12,6 +12,7 @@ sources:
   - "src/web/ui/client.ts"
   - "src/web/logic/poll.ts"
   - "src/web/logic/connection.ts"
+  - "src/web/logic/snapshot.ts"
 measured_on: "Chrome 157, Node 26.13.0, on Linux under WSL2"
 ---
 
@@ -23,7 +24,7 @@ measured_on: "Chrome 157, Node 26.13.0, on Linux under WSL2"
 > CSP and polling lines were checked against the sources listed; the `POST` checks, `POST /api/commands`, the
 > `Snapshot` fields beyond `runId`, `now`, `sessions` and `errors`, and the `202` reschedule are design the code does
 > not hold yet, carried forward unchecked. The measured lines were taken on 2026-11-08 while designing and were not
-> re-run. Not covered: the browser code's own rules ([[Hub Browser Code]]), what a command does once queued
+> re-run, except the `100 Continue` line, taken on 2026-11-11. Not covered: the browser code's own rules ([[Hub Browser Code]]), what a command does once queued
 > ([[Hub Commands]]), and the socket the plugins use ([[Hub Plugin Socket]]), which has none of these checks.
 
 Read this before touching `src/server/http/browser.ts`, `src/server/main.ts`'s startup, `client.ts`, or any response
@@ -67,7 +68,7 @@ header.
   exact `Origin`, `Content-Type: application/json`, a 64 KiB body cap, then the schema #order-dependent
 - [fact] As built, a wrong `Host` answers 421, an unknown path 404 whatever the method, a method other than `GET` on
   a known path 405 with `Allow: GET`, and a missing or wrong token 401 with `WWW-Authenticate: Bearer`, in that order.
-  No route accepts a `POST` yet (`reply`, `src/server/http/browser.ts:110`)
+  No route accepts a `POST` yet (`reply`, `src/server/http/browser.ts:111`)
 - [invariant] The route is matched on the raw path before `?`, never a normalised one, so only a path spelled exactly
   as a route matches it
 - [fact] `curl.exe` on the Windows side reached a server bound to `127.0.0.1` in WSL2 and sent
@@ -76,9 +77,15 @@ header.
 - [invariant] Logs and error messages name fields, never board text or other values
 - [invariant] Every response carries the CSP below, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`
   and `Cache-Control: no-store` (so board text is not cached on disk). There are no CORS headers
-- [trap] Node answers a request it cannot parse (400) or whose headers pass its limit (431) itself, with none of these
-  headers, unless the server has a `clientError` listener. The hub's listener answers the same status with them
-  (`createClientErrorHandler`, `src/server/http/browser.ts:64`)
+- [trap] Node answers some requests itself, with none of these headers. One it cannot parse (400), with headers or
+  chunk extensions over its limits (431, 413) or stalled past its timeout (408) goes to a `clientError` listener
+  when there is one: the hub's answers the same status with these headers and then destroys the socket, as Node
+  does, since a half-open socket outlives `end` (`createClientErrorHandler`, `src/server/http/browser.ts:64`)
+- [trap] Node also answers an HTTP/1.1 request with no `Host` (400) and an `Expect` other than `100-continue` (417)
+  without emitting `request`. The hub sets `requireHostHeader: false` and listens for `checkExpectation`, so both
+  reach the handler's checks; a missing `Host` gets 421 (`start`, `src/server/main.ts:40`)
+- [fact] `Expect: 100-continue` still gets Node's bare interim `100 Continue` before the handler's reply #measured
+  (Node 26.13.0, 2026-11-11)
 
 ```
 default-src 'none'; script-src 'self' 'sha256-<import map>'; style-src 'self'; connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; require-trusted-types-for 'script'; trusted-types 'none'
@@ -145,6 +152,7 @@ type CommandView = {
   `errors`; the rest above is design (`Snapshot`, `src/shared/api.ts:18`)
 - [invariant] `runId` is constant for a run; when it changes the page reloads to get the new code. It is read and
   compared before the rest of the body is narrowed, since a restarted hub may serve a shape the old page rejects
+  (`readRunSnapshot`, `src/web/logic/snapshot.ts:32`)
 - [invariant] Relative times count from the snapshot's `now`, not the browser's clock, because WSL2's clock can lag
   the host's after sleep
 

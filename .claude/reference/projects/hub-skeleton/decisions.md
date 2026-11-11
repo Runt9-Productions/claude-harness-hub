@@ -42,8 +42,11 @@ Rulings for the first slice. The design itself is in the hub notes under `domain
 - [decision] `CLAUDE.md` "Layout" gains a line each for `scripts/` and `dist/`, on this pull request (owner,
   2026-11-11)
 - [decision] A short `README.md` on how to start the hub goes on this pull request (owner, 2026-11-11)
-- [proposal] The command line's tests past the terminal check go to a `from-review` issue, since they need a
-  pseudo-terminal or a refactor (made)
+- [decision] The command line's tests past the terminal check go to a `from-review` issue (#25), since they need a
+  pseudo-terminal or a refactor (owner, 2026-11-11)
+- [decision] The code review runs again over the first fix round's commits only (owner, 2026-11-11)
+- [decision] After a snapshot the page cannot read, the failure banner stays and a visibility change may resume
+  polling behind it (owner, 2026-11-11)
 
 ## Open Questions
 

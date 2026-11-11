@@ -43,7 +43,7 @@ build.
 - [trap] `tsc` emits even when it reports errors, so `npm start` runs `tsc -p src/web/tsconfig.json && node
   src/server/main.ts` and a type error stops the start #silent-failure
 - [invariant] `main.ts` builds paths from `import.meta.url`, never the working directory (`runFromCommandLine`,
-  `src/server/main.ts:90`)
+  `src/server/main.ts:98`)
 - [invariant] Preact is served from the installed package as three files: `dist/preact.mjs`, `hooks/dist/hooks.mjs`
   and `jsx-runtime/dist/jsxRuntime.mjs`. Emitted code and Preact's own files import the bare name `preact`, which
   the page's inline import map resolves. The map is built from the same list as the `/vendor/` URLs (`importMap`,

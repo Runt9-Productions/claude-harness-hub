@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Snapshot } from "../../shared/api.ts";
-import { readRunId, readSnapshot } from "./snapshot.ts";
+import { readRunSnapshot, readSnapshot } from "./snapshot.ts";
 
 const body: Snapshot = {
   runId: "run-a",
@@ -32,7 +32,10 @@ void test("a body that does not fit the snapshot throws naming what does not fit
   assert.throws(() => readSnapshot([]), /snapshot is not an object/);
 });
 
-void test("readRunId reads the runId from a body whose other fields do not fit, and throws on one that is not a string", () => {
-  assert.equal(readRunId({ runId: "run-b", sessions: [{}] }), "run-b");
-  assert.throws(() => readRunId({ ...body, runId: 7 }), /field runId is not a string/);
+void test("a body from another run reads as restarted even when the rest does not fit, and one from this run is narrowed", () => {
+  const unfit = { ...body, runId: "run-b", sessions: [{}] };
+  assert.deepEqual(readRunSnapshot(unfit, "run-a"), { kind: "restarted" });
+  assert.throws(() => readRunSnapshot(unfit, "run-b"), /field sessions is not an empty list/);
+  assert.deepEqual(readRunSnapshot(body, undefined), { kind: "snapshot", snapshot: body });
+  assert.throws(() => readRunSnapshot({ ...body, runId: 7 }, "run-a"), /field runId is not a string/);
 });

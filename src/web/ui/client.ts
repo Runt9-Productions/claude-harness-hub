@@ -2,7 +2,7 @@ import { snapshotPath, type Snapshot } from "../../shared/api.ts";
 import type { ConnectionEvent } from "../logic/connection.ts";
 import { readLaunchHash } from "../logic/launch-link.ts";
 import { pollInterval } from "../logic/poll.ts";
-import { readRunId, readSnapshot } from "../logic/snapshot.ts";
+import { readRunSnapshot } from "../logic/snapshot.ts";
 
 const tokenKey = "hub.token";
 // fetch has no timeout of its own, so without this one hung request would end the chained poll for good.
@@ -37,18 +37,18 @@ export function startClient(dispatch: (event: ConnectionEvent) => void): void {
   let isRequestInFlight = false;
 
   /**
-   * Narrows the body, or reloads the page for the new run's code and returns undefined when the hub restarted. The
-   * `runId` is compared before narrowing, since a restarted hub may serve a shape this build rejects. Any other body
-   * that is not a snapshot throws, so it reaches the failure banner rather than reading as a hub not responding.
+   * Narrows the body, or reloads the page for the new run's code and returns undefined when the hub restarted. Any
+   * other body that is not a snapshot throws, so it reaches the failure banner rather than reading as a hub not
+   * responding.
    */
   function readForThisRun(body: unknown): Snapshot | undefined {
-    const bodyRunId = readRunId(body);
-    if (runId !== undefined && bodyRunId !== runId) {
+    const read = readRunSnapshot(body, runId);
+    if (read.kind === "restarted") {
       location.reload();
       return undefined;
     }
-    runId = bodyRunId;
-    return readSnapshot(body);
+    runId = read.snapshot.runId;
+    return read.snapshot;
   }
 
   // The token is saved only once the hub accepts it, so a page on another origin that navigates this tab to a wrong

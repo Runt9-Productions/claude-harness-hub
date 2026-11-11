@@ -45,17 +45,25 @@ export async function start(config: HubConfig): Promise<RunningHub> {
   const page = pageHtml(importMapText);
   const snapshot = (): Snapshot => ({ runId, now: Date.now(), sessions: [], errors: [] });
 
-  const server = createServer();
+  // Node answers a missing Host itself, without the fixed headers, unless told not to; the handler's Host check refuses it.
+  const server = createServer({ requireHostHeader: false });
   server.on("clientError", createClientErrorHandler(importMapText));
   server.listen(config.port, "127.0.0.1");
   await once(server, "listening");
   const address = server.address();
   if (address === null || typeof address === "string") throw new Error(`unexpected server address ${address}`);
   // Attached after listening because the Host check needs the bound port; this runs before any connection is read.
-  server.on(
-    "request",
-    createBrowserHandler({ port: address.port, token, page, importMap: importMapText, assets, snapshot }),
-  );
+  const handleBrowserRequest = createBrowserHandler({
+    port: address.port,
+    token,
+    page,
+    importMap: importMapText,
+    assets,
+    snapshot,
+  });
+  server.on("request", handleBrowserRequest);
+  // Without a listener Node answers an `Expect` other than `100-continue` with its own 417.
+  server.on("checkExpectation", handleBrowserRequest);
 
   async function close(): Promise<void> {
     const closed = once(server, "close");

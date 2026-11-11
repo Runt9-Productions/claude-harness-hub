@@ -42,10 +42,12 @@ async function startFixtureHub(t: TestContext): Promise<{ hub: RunningHub; root:
   return { hub, root };
 }
 
-function send(port: number, path: string, options: { method?: string; headers?: Record<string, string> } = {}) {
+type SendOptions = { method?: string; headers?: Record<string, string>; address?: string };
+
+function send(port: number, path: string, options: SendOptions = {}) {
   return new Promise<Reply>((resolve, reject) => {
     const outgoing = request({
-      host: "127.0.0.1",
+      host: options.address ?? "127.0.0.1",
       port,
       path,
       method: options.method ?? "GET",
@@ -86,7 +88,19 @@ async function listenOnFreePort(): Promise<{ server: Server; port: number }> {
   return { server, port: address.port };
 }
 
-void test("a request whose Host is not exactly 127.0.0.1 and the hub's port is refused", async (t) => {
+async function startAndClose(assetRoot: string): Promise<void> {
+  const hub = await start({ port: 0, assetRoot });
+  await hub.close();
+}
+
+void test("the hub listens on 127.0.0.1 only", async (t) => {
+  const { hub } = await startFixtureHub(t);
+  for (const address of ["127.0.0.2", "::1"]) {
+    await assert.rejects(send(hub.port, "/", { address }), address);
+  }
+});
+
+void test("a request whose Host is not exactly 127.0.0.1 and the hub's port is refused before its path or method is checked", async (t) => {
   const { hub } = await startFixtureHub(t);
   const wrongHosts = [
     `localhost:${hub.port}`,
@@ -99,13 +113,17 @@ void test("a request whose Host is not exactly 127.0.0.1 and the hub's port is r
     const reply = await send(hub.port, "/", { headers: { host } });
     assert.equal(reply.status, 421, host);
   }
+  const unknownPost = await send(hub.port, "/nothing-here", { method: "POST", headers: { host: "localhost" } });
+  assert.equal(unknownPost.status, 421, "an unknown path with another method");
 });
 
-void test("/api/snapshot answers 401 without the launch token and the empty snapshot with it", async (t) => {
+void test("/api/snapshot answers 401 without the launch token as a Bearer credential and the empty snapshot with it", async (t) => {
   const { hub } = await startFixtureHub(t);
   assert.equal((await send(hub.port, "/api/snapshot")).status, 401);
   const wrongToken = await send(hub.port, "/api/snapshot", { headers: { authorization: "Bearer not-the-token" } });
   assert.equal(wrongToken.status, 401);
+  const noScheme = await send(hub.port, "/api/snapshot", { headers: { authorization: hub.token } });
+  assert.equal(noScheme.status, 401, "the token without the Bearer scheme");
 
   const authorization = `Bearer ${hub.token}`;
   const before = Date.now();
@@ -125,7 +143,19 @@ void test("/api/snapshot answers 401 without the launch token and the empty snap
   assert.equal(fieldsOf(JSON.parse(second.body)).get("runId"), runId, "runId holds for the run");
 });
 
-void test("every kind of response carries the CSP with the import map's hash and the other fixed headers", async (t) => {
+void test("each start makes its own 32-byte launch token and runId", async (t) => {
+  const hubs = [(await startFixtureHub(t)).hub, (await startFixtureHub(t)).hub];
+  assert.equal(Buffer.from(hubs[0]?.token ?? "", "base64url").length, 32);
+  assert.notEqual(hubs[0]?.token, hubs[1]?.token);
+  const runIds = [];
+  for (const hub of hubs) {
+    const reply = await send(hub.port, "/api/snapshot", { headers: { authorization: `Bearer ${hub.token}` } });
+    runIds.push(fieldsOf(JSON.parse(reply.body)).get("runId"));
+  }
+  assert.notEqual(runIds[0], runIds[1]);
+});
+
+void test("every kind of response carries its status and own headers, and the CSP with the import map's hash and the other fixed headers", async (t) => {
   const { hub, root } = await startFixtureHub(t);
   const page = await send(hub.port, "/");
   const importMapHash = createHash("sha256").update(importMapOf(page.body)).digest("base64");
@@ -135,19 +165,22 @@ void test("every kind of response carries the CSP with the import map's hash and
     "require-trusted-types-for 'script'; trusted-types 'none'";
   await rm(join(root, "src/web/icon.svg"));
 
-  const cases: [string, number, Promise<Reply>][] = [
-    ["page", 200, Promise.resolve(page)],
-    ["asset", 200, send(hub.port, "/assets/styles.css")],
-    ["snapshot", 200, send(hub.port, "/api/snapshot", { headers: { authorization: `Bearer ${hub.token}` } })],
-    ["no token", 401, send(hub.port, "/api/snapshot")],
-    ["unknown path", 404, send(hub.port, "/nothing-here")],
-    ["post", 405, send(hub.port, "/", { method: "POST" })],
-    ["wrong host", 421, send(hub.port, "/", { headers: { host: "localhost" } })],
-    ["asset gone since startup", 500, send(hub.port, "/assets/icon.svg")],
+  const cases: [string, number, Record<string, string>, Promise<Reply>][] = [
+    ["page", 200, {}, Promise.resolve(page)],
+    ["asset", 200, {}, send(hub.port, "/assets/styles.css")],
+    ["snapshot", 200, {}, send(hub.port, "/api/snapshot", { headers: { authorization: `Bearer ${hub.token}` } })],
+    ["no token", 401, { "www-authenticate": "Bearer" }, send(hub.port, "/api/snapshot")],
+    ["unknown path", 404, {}, send(hub.port, "/nothing-here")],
+    ["post", 405, { allow: "GET" }, send(hub.port, "/", { method: "POST" })],
+    ["wrong host", 421, {}, send(hub.port, "/", { headers: { host: "localhost" } })],
+    ["asset gone since startup", 500, {}, send(hub.port, "/assets/icon.svg")],
   ];
-  for (const [kind, status, pending] of cases) {
+  for (const [kind, status, ownHeaders, pending] of cases) {
     const reply = await pending;
     assert.equal(reply.status, status, kind);
+    for (const [name, value] of Object.entries(ownHeaders)) {
+      assert.equal(reply.headers[name], value, `${kind} ${name}`);
+    }
     assert.equal(reply.headers["content-security-policy"], expectedCsp, kind);
     assert.equal(reply.headers["x-content-type-options"], "nosniff", kind);
     assert.equal(reply.headers["referrer-policy"], "no-referrer", kind);
@@ -200,12 +233,22 @@ void test("start rejects when the port is already taken", async (t) => {
   await assert.rejects(start({ port: occupier.port, assetRoot }), { code: "EADDRINUSE" });
 });
 
+void test("start rejects an asset root missing a fixed file or holding a file with no content type", async (t) => {
+  const missing = await makeAssetRoot(t);
+  await rm(join(missing, "src/web/icon.svg"));
+  await assert.rejects(startAndClose(missing), /icon\.svg/);
+  const untyped = await makeAssetRoot(t);
+  await writeFile(join(untyped, "dist/browser/web/ui/main.js.map"), "{}\n");
+  await assert.rejects(startAndClose(untyped), /no content type for asset .*main\.js\.map/);
+});
+
 void test("the command line refuses to start when stdout is not a terminal", async () => {
   const mainPath = fileURLToPath(new URL("main.ts", import.meta.url));
   const free = await listenOnFreePort();
   free.server.close();
   await once(free.server, "close");
-  const run = promisify(execFile)(process.execPath, [mainPath, "--port", String(free.port)]);
+  // The timeout kills a hub that starts anyway, which fails the exit code check instead of hanging the test.
+  const run = promisify(execFile)(process.execPath, [mainPath, "--port", String(free.port)], { timeout: 5000 });
   await assert.rejects(run, (error: { code: number; stdout: string; stderr: string }) => {
     assert.equal(error.code, 1);
     assert.equal(error.stdout, "", "no launch link is printed");

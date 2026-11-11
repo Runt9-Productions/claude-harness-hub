@@ -17,10 +17,13 @@ void test("reads a snapshot body into an equal snapshot", () => {
   assert.deepEqual(readSnapshot(JSON.parse(JSON.stringify(body))), body);
 });
 
-void test("a body that does not fit the snapshot throws naming the field", () => {
+void test("a body that does not fit the snapshot throws naming what does not fit", () => {
   assert.throws(() => readSnapshot({ ...body, runId: 7 }), /field runId is not a string/);
   assert.throws(() => readSnapshot({ ...body, now: "1000" }), /field now is not a number/);
   assert.throws(() => readSnapshot({ ...body, sessions: [{}] }), /field sessions is not an empty list/);
+  assert.throws(() => readSnapshot({ ...body, sessions: {} }), /field sessions is not an empty list/);
+  assert.throws(() => readSnapshot({ ...body, errors: null }), /field errors is not a list/);
+  assert.throws(() => readSnapshot({ ...body, errors: [{ message: "x" }] }), /field source is not a string/);
   assert.throws(() => readSnapshot({ ...body, errors: [{ source: "agents" }] }), /field message is not a string/);
   assert.throws(
     () => readSnapshot({ ...body, errors: [{ source: "agents", sessionId: 1, message: "x" }] }),
